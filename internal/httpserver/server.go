@@ -10,6 +10,7 @@ import (
 	"avmd-search-engine-go/internal/flights"
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/geo"
+	"avmd-search-engine-go/internal/supplierroutes"
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
 	"log/slog"
@@ -29,6 +30,7 @@ type HttpServer struct {
 	currencyService *currencies.Service
 	flightService   *flights.Service
 	geoService      *geo.Service
+	routeService    *supplierroutes.Service
 	logger          *slog.Logger
 	validator       *validator.Validate
 }
@@ -56,12 +58,6 @@ func (s *HttpServer) InitHandlers() {
 		DB:       s.cfg.RedisDB,
 	})
 	db, err := dbstore.CreateConnection(context.Background(), s.cfg)
-	if err != nil && s.logger != nil {
-		s.logger.Warn("failed to initialize postgres connection", "error", err)
-	}
-	if err == nil {
-		s.geoService = geo.NewService(geo.NewSQLCRepository(db))
-	}
 	sessionStore := flightsession.NewRedisStore(
 		redisClient,
 		time.Duration(s.cfg.RedisSessionTTLHours)*time.Hour,
@@ -83,6 +79,25 @@ func (s *HttpServer) InitHandlers() {
 	)
 	if err := s.currencyService.Start(context.Background()); err != nil && s.logger != nil {
 		s.logger.Warn("failed to start currency scheduler", "error", err)
+	}
+	routeStore := supplierroutes.NewRedisStore(redisClient)
+	s.routeService = supplierroutes.NewService(
+		tfClient,
+		routeStore,
+		supplierroutes.Config{
+			UpdateCron: s.cfg.TFRoutesUpdateCron,
+			UpdateTime: s.cfg.TFRoutesUpdateTime,
+		},
+		s.logger,
+	)
+	if err := s.routeService.Start(context.Background()); err != nil && s.logger != nil {
+		s.logger.Warn("failed to start TF route scheduler", "error", err)
+	}
+	if err != nil && s.logger != nil {
+		s.logger.Warn("failed to initialize postgres connection", "error", err)
+	}
+	if err == nil {
+		s.geoService = geo.NewServiceWithRouteProvider(geo.NewSQLCRepository(db), s.routeService)
 	}
 	s.calendarService = calendar.NewService(priceStore, s.cfg.DefaultCurrencyCode, s.currencyService, s.logger)
 	s.flightService = flights.NewServiceWithDependencies(tfClient, sessionStore, s.calendarService, s.logger)

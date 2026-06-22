@@ -23,6 +23,8 @@ type Config struct {
 	TFPollingDelaySeconds  int    `env:"TF_POLLING_DELAY_SECONDS" envDefault:"2"`
 	TFCurrenciesUpdateCron string `env:"TF_CURRENCIES_UPDATE_CRON" envDefault:"0 0 3 * * ?"`
 	TFCurrenciesUpdateTime string `env:"TF_CURRENCIES_UPDATE_TIME" envDefault:"03:00"`
+	TFRoutesUpdateCron     string `env:"TF_ROUTES_UPDATE_CRON" envDefault:"0 0 4 * * ?"`
+	TFRoutesUpdateTime     string `env:"TF_ROUTES_UPDATE_TIME" envDefault:"04:00"`
 }
 
 func GetFromEnv() (*Config, error) {

@@ -13,6 +13,8 @@ tags:
 
 paths:
   /api/v1/countries:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: listCountries
@@ -46,6 +48,8 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/countries/{id}:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: getCountry
@@ -95,6 +99,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
   /api/v1/cities:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: listCities
@@ -128,6 +134,8 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/cities/dropdown:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: getCitiesDropdown
@@ -149,6 +157,8 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/cities/{id}:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: getCity
@@ -198,6 +208,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
   /api/v1/airports:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: listAirports
@@ -231,6 +243,8 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
   /api/v1/airports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Geo]
       operationId: getAirport
@@ -280,6 +294,8 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
   /api/v1/flights/calendar:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Flights]
       operationId: getCalendar
@@ -308,6 +324,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
   /api/v1/flights/search:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
     get:
       tags: [Flights]
       operationId: searchFlights
@@ -387,6 +405,15 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   parameters:
+    LocaleHeaderParam:
+      name: Accept-Language
+      in: header
+      required: false
+      description: Language preference (en, ro, ru)
+      schema:
+        type: string
+        enum: [en, ro, ru]
+        default: en
     IDParam:
       name: id
       in: path

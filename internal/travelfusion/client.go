@@ -57,7 +57,7 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (*SearchResult, 
 	if err != nil {
 		return nil, fmt.Errorf("build start routing request: %w", err)
 	}
-	startBody, err := c.postXML(ctx, startPayload)
+	startBody, err := c.postXML(ctx, "StartRouting", startPayload)
 	if err != nil {
 		return nil, fmt.Errorf("start routing: %w", err)
 	}
@@ -85,7 +85,7 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (*SearchResult, 
 		if err != nil {
 			return nil, fmt.Errorf("build check routing request: %w", err)
 		}
-		checkBody, err := c.postXML(ctx, checkPayload)
+		checkBody, err := c.postXML(ctx, "CheckRouting", checkPayload)
 		if err != nil {
 			return nil, fmt.Errorf("check routing: %w", err)
 		}
@@ -115,7 +115,7 @@ func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error)
 	if err != nil {
 		return nil, fmt.Errorf("build get currencies request: %w", err)
 	}
-	body, err := c.postXML(ctx, payload)
+	body, err := c.postXML(ctx, "GetCurrencies", payload)
 	if err != nil {
 		return nil, fmt.Errorf("get currencies: %w", err)
 	}
@@ -127,7 +127,59 @@ func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error)
 	return mapCurrencies(resp.GetCurrencies), nil
 }
 
-func (c *Client) postXML(ctx context.Context, payload []byte) ([]byte, error) {
+func (c *Client) GetBranchSupplierList(ctx context.Context) ([]string, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	payload, err := buildGetBranchSupplierListXML(c.xmlLoginID, c.loginID)
+	if err != nil {
+		return nil, fmt.Errorf("build get branch supplier list request: %w", err)
+	}
+	body, err := c.postXML(ctx, "GetBranchSupplierList", payload)
+	if err != nil {
+		return nil, fmt.Errorf("get branch supplier list: %w", err)
+	}
+
+	var resp commandListGetBranchSupplierListResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parse get branch supplier list response: %w", err)
+	}
+	suppliers := make([]string, 0, len(resp.GetBranchSupplierList.Suppliers))
+	for _, supplier := range resp.GetBranchSupplierList.Suppliers {
+		supplier = strings.TrimSpace(supplier)
+		if supplier != "" {
+			suppliers = append(suppliers, supplier)
+		}
+	}
+	return suppliers, nil
+}
+
+func (c *Client) ListSupplierRoutes(ctx context.Context, supplier string, oneWayOnlyAirportRoutes bool) (*SupplierRoutesResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	payload, err := buildListSupplierRoutesXML(c.xmlLoginID, c.loginID, supplier, oneWayOnlyAirportRoutes)
+	if err != nil {
+		return nil, fmt.Errorf("build list supplier routes request: %w", err)
+	}
+	body, err := c.postXML(ctx, "ListSupplierRoutes", payload)
+	if err != nil {
+		return nil, fmt.Errorf("list supplier routes: %w", err)
+	}
+
+	var resp commandListListSupplierRoutesResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parse list supplier routes response: %w", err)
+	}
+	return &SupplierRoutesResult{
+		AirportRoutes: parseRouteCodes(resp.ListSupplierRoutes.AirportRoutes),
+		CityRoutes:    parseRouteCodes(resp.ListSupplierRoutes.CityRoutes),
+	}, nil
+}
+
+func (c *Client) postXML(ctx context.Context, command string, payload []byte) ([]byte, error) {
 	body := append([]byte(xml.Header), payload...)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewReader(body))
 	if err != nil {
@@ -135,9 +187,15 @@ func (c *Client) postXML(ctx context.Context, payload []byte) ([]byte, error) {
 	}
 	httpReq.Header.Set("Content-Type", "text/xml; charset=utf-8")
 	httpReq.Header.Set("Accept", "text/xml, application/xml")
+	if c.logger != nil {
+		c.logger.Debug("travelfusion xml request sending", "command", command, "bytes", len(body))
+	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		if c.logger != nil {
+			c.logger.Warn("travelfusion xml request failed", "command", command, "error", err)
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -147,10 +205,23 @@ func (c *Client) postXML(ctx context.Context, payload []byte) ([]byte, error) {
 		return nil, err
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		if c.logger != nil {
+			c.logger.Warn(
+				"travelfusion xml response returned non-success status",
+				"command", command,
+				"status", resp.StatusCode,
+				"bytes", len(respBody),
+			)
+		}
 		return nil, fmt.Errorf("travelfusion returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 	if c.logger != nil {
-		c.logger.Debug("travelfusion xml response received", "bytes", len(respBody))
+		c.logger.Debug(
+			"travelfusion xml response received",
+			"command", command,
+			"status", resp.StatusCode,
+			"bytes", len(respBody),
+		)
 	}
 	return respBody, nil
 }

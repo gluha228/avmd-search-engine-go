@@ -33,12 +33,22 @@ type Repository interface {
 	Dropdown(ctx context.Context, req CityDropdownRequest) ([]CityDropdown, error)
 }
 
+type RouteProvider interface {
+	IsKnownAirport(ctx context.Context, airportCode string) bool
+	IsValidAirportRoute(ctx context.Context, originCode, destinationCode string) bool
+}
+
 type Service struct {
-	repo Repository
+	repo          Repository
+	routeProvider RouteProvider
 }
 
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+func NewServiceWithRouteProvider(repo Repository, routeProvider RouteProvider) *Service {
+	return &Service{repo: repo, routeProvider: routeProvider}
 }
 
 func (s *Service) ListCountries(ctx context.Context) ([]Country, error) {
@@ -161,10 +171,10 @@ func (s *Service) Dropdown(ctx context.Context, req CityDropdownRequest) ([]City
 	}
 	filtered := make([]CityDropdown, 0, len(items))
 	for _, item := range items {
-		if !isReachableAirport(item.AirportCode) {
+		if !s.isReachableAirport(ctx, item.AirportCode) {
 			continue
 		}
-		if req.OriginAirportCode != nil && !isValidRoute(*req.OriginAirportCode, item.AirportCode) {
+		if req.OriginAirportCode != nil && !s.isValidRouteByAnyProvider(ctx, *req.OriginAirportCode, item.AirportCode) {
 			continue
 		}
 		filtered = append(filtered, item)
@@ -215,4 +225,14 @@ func normalizeLocale(locale string) string {
 		return "ro"
 	}
 	return "en"
+}
+
+func (s *Service) isReachableAirport(ctx context.Context, airportCode string) bool {
+	return isReachableAirport(airportCode) ||
+		(s.routeProvider != nil && s.routeProvider.IsKnownAirport(ctx, airportCode))
+}
+
+func (s *Service) isValidRouteByAnyProvider(ctx context.Context, origin, destination string) bool {
+	return isValidRoute(origin, destination) ||
+		(s.routeProvider != nil && s.routeProvider.IsValidAirportRoute(ctx, origin, destination))
 }

@@ -13,6 +13,11 @@ type fakeRepo struct {
 	created CityRequest
 }
 
+type fakeRouteProvider struct {
+	known  map[string]bool
+	routes map[string]bool
+}
+
 func (r *fakeRepo) ListCountries(context.Context) ([]Country, error) { return nil, nil }
 func (r *fakeRepo) GetCountry(context.Context, int64) (*Country, error) {
 	if r.country == nil {
@@ -55,6 +60,14 @@ func (r *fakeRepo) UpdateAirport(context.Context, int64, AirportRequest) (*Airpo
 func (r *fakeRepo) DeleteAirport(context.Context, int64) error { return nil }
 func (r *fakeRepo) Dropdown(context.Context, CityDropdownRequest) ([]CityDropdown, error) {
 	return r.items, nil
+}
+
+func (r fakeRouteProvider) IsKnownAirport(_ context.Context, airportCode string) bool {
+	return r.known[airportCode]
+}
+
+func (r fakeRouteProvider) IsValidAirportRoute(_ context.Context, originCode, destinationCode string) bool {
+	return r.routes[originCode+destinationCode]
 }
 
 func TestCreateCityDefaultsIsCapitalToFalse(t *testing.T) {
@@ -123,5 +136,27 @@ func TestDropdownFiltersRoutes(t *testing.T) {
 	}
 	if len(result) != 1 || result[0].AirportCode != "CLJ" {
 		t.Fatalf("expected only valid OTP -> CLJ route, got %+v", result)
+	}
+}
+
+func TestDropdownUsesSupplierRouteProvider(t *testing.T) {
+	origin := "ABC"
+	service := NewServiceWithRouteProvider(&fakeRepo{items: []CityDropdown{
+		{ID: 1, AirportCode: "XYZ"},
+	}}, fakeRouteProvider{
+		known:  map[string]bool{"XYZ": true},
+		routes: map[string]bool{"ABCXYZ": true},
+	})
+
+	result, err := service.Dropdown(context.Background(), CityDropdownRequest{
+		Search:            "xyz",
+		OriginAirportCode: &origin,
+		Limit:             50,
+	})
+	if err != nil {
+		t.Fatalf("Dropdown returned error: %v", err)
+	}
+	if len(result) != 1 || result[0].AirportCode != "XYZ" {
+		t.Fatalf("expected TF route provider result, got %+v", result)
 	}
 }

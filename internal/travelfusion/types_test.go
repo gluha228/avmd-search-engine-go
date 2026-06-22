@@ -115,6 +115,94 @@ func TestMapCurrencies(t *testing.T) {
 	}
 }
 
+func TestBuildGetBranchSupplierListXML(t *testing.T) {
+	payload, err := buildGetBranchSupplierListXML("xml-login", "login")
+	if err != nil {
+		t.Fatalf("buildGetBranchSupplierListXML returned error: %v", err)
+	}
+	xmlBody := string(payload)
+	for _, part := range []string{
+		"<GetBranchSupplierList>",
+		"<XmlLoginId>xml-login</XmlLoginId>",
+		"<LoginId>login</LoginId>",
+	} {
+		if !strings.Contains(xmlBody, part) {
+			t.Fatalf("expected XML to contain %q, got %s", part, xmlBody)
+		}
+	}
+}
+
+func TestBuildListSupplierRoutesXML(t *testing.T) {
+	payload, err := buildListSupplierRoutesXML("xml-login", "login", "easyjet", false)
+	if err != nil {
+		t.Fatalf("buildListSupplierRoutesXML returned error: %v", err)
+	}
+	xmlBody := string(payload)
+	for _, part := range []string{
+		"<ListSupplierRoutes>",
+		"<Supplier>easyjet</Supplier>",
+		"<OneWayOnlyAirportRoutes>false</OneWayOnlyAirportRoutes>",
+	} {
+		if !strings.Contains(xmlBody, part) {
+			t.Fatalf("expected XML to contain %q, got %s", part, xmlBody)
+		}
+	}
+}
+
+func TestParseRouteCodes(t *testing.T) {
+	routes := parseRouteCodes("madjfk BAD LONPAR MADJFK\nOTPTLV")
+	expected := []string{"MADJFK", "LONPAR", "OTPTLV"}
+	if len(routes) != len(expected) {
+		t.Fatalf("expected %d routes, got %+v", len(expected), routes)
+	}
+	for i := range expected {
+		if routes[i] != expected[i] {
+			t.Fatalf("expected route %q at %d, got %+v", expected[i], i, routes)
+		}
+	}
+}
+
+func TestUnmarshalGetBranchSupplierListResponse(t *testing.T) {
+	body := []byte(`<CommandList>
+  <GetBranchSupplierList>
+    <BranchSupplierList>
+      <Supplier>easyjet</Supplier>
+      <Supplier>ryanair</Supplier>
+    </BranchSupplierList>
+  </GetBranchSupplierList>
+</CommandList>`)
+
+	var resp commandListGetBranchSupplierListResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	if len(resp.GetBranchSupplierList.Suppliers) != 2 || resp.GetBranchSupplierList.Suppliers[0] != "easyjet" {
+		t.Fatalf("unexpected suppliers: %+v", resp.GetBranchSupplierList.Suppliers)
+	}
+}
+
+func TestUnmarshalListSupplierRoutesResponse(t *testing.T) {
+	body := []byte(`<CommandList>
+  <ListSupplierRoutes>
+    <RouteList>
+      <AirportRoutes>OTPCLJ CLJOTP</AirportRoutes>
+      <CityRoutes>LONPAR</CityRoutes>
+    </RouteList>
+  </ListSupplierRoutes>
+</CommandList>`)
+
+	var resp commandListListSupplierRoutesResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	if got := parseRouteCodes(resp.ListSupplierRoutes.AirportRoutes); len(got) != 2 || got[0] != "OTPCLJ" {
+		t.Fatalf("unexpected airport routes: %+v", got)
+	}
+	if got := parseRouteCodes(resp.ListSupplierRoutes.CityRoutes); len(got) != 1 || got[0] != "LONPAR" {
+		t.Fatalf("unexpected city routes: %+v", got)
+	}
+}
+
 func TestExtractFlights(t *testing.T) {
 	body := []byte(`<CommandList>
   <CheckRouting>

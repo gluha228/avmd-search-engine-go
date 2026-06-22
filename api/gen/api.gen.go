@@ -17,6 +17,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for LocaleHeaderParam.
+const (
+	En LocaleHeaderParam = "en"
+	Ro LocaleHeaderParam = "ro"
+	Ru LocaleHeaderParam = "ru"
+)
+
+// Valid indicates whether the value is a known member of the LocaleHeaderParam enum.
+func (e LocaleHeaderParam) Valid() bool {
+	switch e {
+	case En:
+		return true
+	case Ro:
+		return true
+	case Ru:
+		return true
+	default:
+		return false
+	}
+}
+
 // Airport defines model for Airport.
 type Airport struct {
 	CityId   int64    `json:"city_id"`
@@ -157,6 +178,9 @@ type InfantCountParam = int32
 // LimitParam defines model for LimitParam.
 type LimitParam = int32
 
+// LocaleHeaderParam defines model for LocaleHeaderParam.
+type LocaleHeaderParam string
+
 // MaxIndividualSegmentDurationMinutesParam defines model for MaxIndividualSegmentDurationMinutesParam.
 type MaxIndividualSegmentDurationMinutesParam = int32
 
@@ -205,11 +229,104 @@ type InternalError = Error
 // NotFound defines model for NotFound.
 type NotFound = Error
 
+// ListAirportsParams defines parameters for ListAirports.
+type ListAirportsParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// CreateAirportParams defines parameters for CreateAirport.
+type CreateAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// DeleteAirportParams defines parameters for DeleteAirport.
+type DeleteAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// GetAirportParams defines parameters for GetAirport.
+type GetAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// UpdateAirportParams defines parameters for UpdateAirport.
+type UpdateAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// ListCitiesParams defines parameters for ListCities.
+type ListCitiesParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// CreateCityParams defines parameters for CreateCity.
+type CreateCityParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
 // GetCitiesDropdownParams defines parameters for GetCitiesDropdown.
 type GetCitiesDropdownParams struct {
 	Search            SearchParam             `form:"search" json:"search"`
 	OriginAirportCode *OriginAirportCodeParam `form:"originAirportCode,omitempty" json:"originAirportCode,omitempty"`
 	Limit             *LimitParam             `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// DeleteCityParams defines parameters for DeleteCity.
+type DeleteCityParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// GetCityParams defines parameters for GetCity.
+type GetCityParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// UpdateCityParams defines parameters for UpdateCity.
+type UpdateCityParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// ListCountriesParams defines parameters for ListCountries.
+type ListCountriesParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// CreateCountryParams defines parameters for CreateCountry.
+type CreateCountryParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// DeleteCountryParams defines parameters for DeleteCountry.
+type DeleteCountryParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// GetCountryParams defines parameters for GetCountry.
+type GetCountryParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// UpdateCountryParams defines parameters for UpdateCountry.
+type UpdateCountryParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
 
 // GetCalendarParams defines parameters for GetCalendar.
@@ -218,6 +335,9 @@ type GetCalendarParams struct {
 	ArrivalAirportCode   ArrivalAirportCodeParam   `form:"arrivalAirportCode" json:"arrivalAirportCode" validate:"required,len=3,uppercase,alpha"`
 	DateFrom             DateFromParam             `form:"dateFrom" json:"dateFrom" validate:"required"`
 	DateTo               DateToParam               `form:"dateTo" json:"dateTo" validate:"required"`
+
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
 
 // SearchFlightsParams defines parameters for SearchFlights.
@@ -247,6 +367,9 @@ type SearchFlightsParams struct {
 	DepartureInboundTo                  *DepartureInboundToParam                  `form:"departureInboundTo,omitempty" json:"departureInboundTo,omitempty"`
 	ArrivalInboundFrom                  *ArrivalInboundFromParam                  `form:"arrivalInboundFrom,omitempty" json:"arrivalInboundFrom,omitempty"`
 	ArrivalInboundTo                    *ArrivalInboundToParam                    `form:"arrivalInboundTo,omitempty" json:"arrivalInboundTo,omitempty"`
+
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
 
 // CreateAirportJSONRequestBody defines body for CreateAirport for application/json ContentType.
@@ -271,52 +394,52 @@ type UpdateCountryJSONRequestBody = CountryRequest
 type ServerInterface interface {
 
 	// (GET /api/v1/airports)
-	ListAirports(w http.ResponseWriter, r *http.Request)
+	ListAirports(w http.ResponseWriter, r *http.Request, params ListAirportsParams)
 
 	// (POST /api/v1/airports)
-	CreateAirport(w http.ResponseWriter, r *http.Request)
+	CreateAirport(w http.ResponseWriter, r *http.Request, params CreateAirportParams)
 
 	// (DELETE /api/v1/airports/{id})
-	DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+	DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteAirportParams)
 
 	// (GET /api/v1/airports/{id})
-	GetAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+	GetAirport(w http.ResponseWriter, r *http.Request, id IDParam, params GetAirportParams)
 
 	// (PUT /api/v1/airports/{id})
-	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams)
 
 	// (GET /api/v1/cities)
-	ListCities(w http.ResponseWriter, r *http.Request)
+	ListCities(w http.ResponseWriter, r *http.Request, params ListCitiesParams)
 
 	// (POST /api/v1/cities)
-	CreateCity(w http.ResponseWriter, r *http.Request)
+	CreateCity(w http.ResponseWriter, r *http.Request, params CreateCityParams)
 
 	// (GET /api/v1/cities/dropdown)
 	GetCitiesDropdown(w http.ResponseWriter, r *http.Request, params GetCitiesDropdownParams)
 
 	// (DELETE /api/v1/cities/{id})
-	DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam)
+	DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCityParams)
 
 	// (GET /api/v1/cities/{id})
-	GetCity(w http.ResponseWriter, r *http.Request, id IDParam)
+	GetCity(w http.ResponseWriter, r *http.Request, id IDParam, params GetCityParams)
 
 	// (PUT /api/v1/cities/{id})
-	UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam)
+	UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCityParams)
 
 	// (GET /api/v1/countries)
-	ListCountries(w http.ResponseWriter, r *http.Request)
+	ListCountries(w http.ResponseWriter, r *http.Request, params ListCountriesParams)
 
 	// (POST /api/v1/countries)
-	CreateCountry(w http.ResponseWriter, r *http.Request)
+	CreateCountry(w http.ResponseWriter, r *http.Request, params CreateCountryParams)
 
 	// (DELETE /api/v1/countries/{id})
-	DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam)
+	DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCountryParams)
 
 	// (GET /api/v1/countries/{id})
-	GetCountry(w http.ResponseWriter, r *http.Request, id IDParam)
+	GetCountry(w http.ResponseWriter, r *http.Request, id IDParam, params GetCountryParams)
 
 	// (PUT /api/v1/countries/{id})
-	UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam)
+	UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCountryParams)
 
 	// (GET /api/v1/flights/calendar)
 	GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams)
@@ -330,37 +453,37 @@ type ServerInterface interface {
 type Unimplemented struct{}
 
 // (GET /api/v1/airports)
-func (_ Unimplemented) ListAirports(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListAirports(w http.ResponseWriter, r *http.Request, params ListAirportsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (POST /api/v1/airports)
-func (_ Unimplemented) CreateAirport(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateAirport(w http.ResponseWriter, r *http.Request, params CreateAirportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (DELETE /api/v1/airports/{id})
-func (_ Unimplemented) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteAirportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/airports/{id})
-func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam, params GetAirportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (PUT /api/v1/airports/{id})
-func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/cities)
-func (_ Unimplemented) ListCities(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCities(w http.ResponseWriter, r *http.Request, params ListCitiesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (POST /api/v1/cities)
-func (_ Unimplemented) CreateCity(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateCity(w http.ResponseWriter, r *http.Request, params CreateCityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -370,42 +493,42 @@ func (_ Unimplemented) GetCitiesDropdown(w http.ResponseWriter, r *http.Request,
 }
 
 // (DELETE /api/v1/cities/{id})
-func (_ Unimplemented) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/cities/{id})
-func (_ Unimplemented) GetCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) GetCity(w http.ResponseWriter, r *http.Request, id IDParam, params GetCityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (PUT /api/v1/cities/{id})
-func (_ Unimplemented) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/countries)
-func (_ Unimplemented) ListCountries(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCountries(w http.ResponseWriter, r *http.Request, params ListCountriesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (POST /api/v1/countries)
-func (_ Unimplemented) CreateCountry(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateCountry(w http.ResponseWriter, r *http.Request, params CreateCountryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (DELETE /api/v1/countries/{id})
-func (_ Unimplemented) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCountryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/countries/{id})
-func (_ Unimplemented) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam, params GetCountryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (PUT /api/v1/countries/{id})
-func (_ Unimplemented) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (_ Unimplemented) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCountryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -431,8 +554,35 @@ type MiddlewareFunc func(http.Handler) http.Handler
 // ListAirports operation middleware
 func (siw *ServerInterfaceWrapper) ListAirports(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAirportsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAirports(w, r)
+		siw.Handler.ListAirports(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -445,8 +595,35 @@ func (siw *ServerInterfaceWrapper) ListAirports(w http.ResponseWriter, r *http.R
 // CreateAirport operation middleware
 func (siw *ServerInterfaceWrapper) CreateAirport(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateAirportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateAirport(w, r)
+		siw.Handler.CreateAirport(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -471,8 +648,32 @@ func (siw *ServerInterfaceWrapper) DeleteAirport(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteAirportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteAirport(w, r, id)
+		siw.Handler.DeleteAirport(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -497,8 +698,32 @@ func (siw *ServerInterfaceWrapper) GetAirport(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAirportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAirport(w, r, id)
+		siw.Handler.GetAirport(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -523,8 +748,32 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateAirportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateAirport(w, r, id)
+		siw.Handler.UpdateAirport(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -537,8 +786,35 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 // ListCities operation middleware
 func (siw *ServerInterfaceWrapper) ListCities(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCitiesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCities(w, r)
+		siw.Handler.ListCities(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -551,8 +827,35 @@ func (siw *ServerInterfaceWrapper) ListCities(w http.ResponseWriter, r *http.Req
 // CreateCity operation middleware
 func (siw *ServerInterfaceWrapper) CreateCity(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateCityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateCity(w, r)
+		siw.Handler.CreateCity(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -610,6 +913,27 @@ func (siw *ServerInterfaceWrapper) GetCitiesDropdown(w http.ResponseWriter, r *h
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCitiesDropdown(w, r, params)
 	}))
@@ -636,8 +960,32 @@ func (siw *ServerInterfaceWrapper) DeleteCity(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteCityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteCity(w, r, id)
+		siw.Handler.DeleteCity(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -662,8 +1010,32 @@ func (siw *ServerInterfaceWrapper) GetCity(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCity(w, r, id)
+		siw.Handler.GetCity(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -688,8 +1060,32 @@ func (siw *ServerInterfaceWrapper) UpdateCity(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateCityParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateCity(w, r, id)
+		siw.Handler.UpdateCity(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -702,8 +1098,35 @@ func (siw *ServerInterfaceWrapper) UpdateCity(w http.ResponseWriter, r *http.Req
 // ListCountries operation middleware
 func (siw *ServerInterfaceWrapper) ListCountries(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCountriesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCountries(w, r)
+		siw.Handler.ListCountries(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -716,8 +1139,35 @@ func (siw *ServerInterfaceWrapper) ListCountries(w http.ResponseWriter, r *http.
 // CreateCountry operation middleware
 func (siw *ServerInterfaceWrapper) CreateCountry(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateCountryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateCountry(w, r)
+		siw.Handler.CreateCountry(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -742,8 +1192,32 @@ func (siw *ServerInterfaceWrapper) DeleteCountry(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteCountryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteCountry(w, r, id)
+		siw.Handler.DeleteCountry(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -768,8 +1242,32 @@ func (siw *ServerInterfaceWrapper) GetCountry(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCountryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCountry(w, r, id)
+		siw.Handler.GetCountry(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -794,8 +1292,32 @@ func (siw *ServerInterfaceWrapper) UpdateCountry(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateCountryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateCountry(w, r, id)
+		siw.Handler.UpdateCountry(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -864,6 +1386,27 @@ func (siw *ServerInterfaceWrapper) GetCalendar(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "dateTo", Err: err})
 		}
 		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1211,6 +1754,27 @@ func (siw *ServerInterfaceWrapper) SearchFlights(w http.ResponseWriter, r *http.
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchFlights(w, r, params)
 	}))
@@ -1400,6 +1964,7 @@ type InternalErrorJSONResponse Error
 type NotFoundJSONResponse Error
 
 type ListAirportsRequestObject struct {
+	Params ListAirportsParams
 }
 
 type ListAirportsResponseObject interface {
@@ -1421,7 +1986,8 @@ func (response ListAirports200JSONResponse) VisitListAirportsResponse(w http.Res
 }
 
 type CreateAirportRequestObject struct {
-	Body *CreateAirportJSONRequestBody
+	Params CreateAirportParams
+	Body   *CreateAirportJSONRequestBody
 }
 
 type CreateAirportResponseObject interface {
@@ -1471,7 +2037,8 @@ func (response CreateAirport500JSONResponse) VisitCreateAirportResponse(w http.R
 }
 
 type DeleteAirportRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params DeleteAirportParams
 }
 
 type DeleteAirportResponseObject interface {
@@ -1501,7 +2068,8 @@ func (response DeleteAirport404JSONResponse) VisitDeleteAirportResponse(w http.R
 }
 
 type GetAirportRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params GetAirportParams
 }
 
 type GetAirportResponseObject interface {
@@ -1537,8 +2105,9 @@ func (response GetAirport404JSONResponse) VisitGetAirportResponse(w http.Respons
 }
 
 type UpdateAirportRequestObject struct {
-	Id   IDParam `json:"id"`
-	Body *UpdateAirportJSONRequestBody
+	Id     IDParam `json:"id"`
+	Params UpdateAirportParams
+	Body   *UpdateAirportJSONRequestBody
 }
 
 type UpdateAirportResponseObject interface {
@@ -1602,6 +2171,7 @@ func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.R
 }
 
 type ListCitiesRequestObject struct {
+	Params ListCitiesParams
 }
 
 type ListCitiesResponseObject interface {
@@ -1623,7 +2193,8 @@ func (response ListCities200JSONResponse) VisitListCitiesResponse(w http.Respons
 }
 
 type CreateCityRequestObject struct {
-	Body *CreateCityJSONRequestBody
+	Params CreateCityParams
+	Body   *CreateCityJSONRequestBody
 }
 
 type CreateCityResponseObject interface {
@@ -1723,7 +2294,8 @@ func (response GetCitiesDropdown500JSONResponse) VisitGetCitiesDropdownResponse(
 }
 
 type DeleteCityRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params DeleteCityParams
 }
 
 type DeleteCityResponseObject interface {
@@ -1753,7 +2325,8 @@ func (response DeleteCity404JSONResponse) VisitDeleteCityResponse(w http.Respons
 }
 
 type GetCityRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params GetCityParams
 }
 
 type GetCityResponseObject interface {
@@ -1789,8 +2362,9 @@ func (response GetCity404JSONResponse) VisitGetCityResponse(w http.ResponseWrite
 }
 
 type UpdateCityRequestObject struct {
-	Id   IDParam `json:"id"`
-	Body *UpdateCityJSONRequestBody
+	Id     IDParam `json:"id"`
+	Params UpdateCityParams
+	Body   *UpdateCityJSONRequestBody
 }
 
 type UpdateCityResponseObject interface {
@@ -1854,6 +2428,7 @@ func (response UpdateCity500JSONResponse) VisitUpdateCityResponse(w http.Respons
 }
 
 type ListCountriesRequestObject struct {
+	Params ListCountriesParams
 }
 
 type ListCountriesResponseObject interface {
@@ -1875,7 +2450,8 @@ func (response ListCountries200JSONResponse) VisitListCountriesResponse(w http.R
 }
 
 type CreateCountryRequestObject struct {
-	Body *CreateCountryJSONRequestBody
+	Params CreateCountryParams
+	Body   *CreateCountryJSONRequestBody
 }
 
 type CreateCountryResponseObject interface {
@@ -1925,7 +2501,8 @@ func (response CreateCountry500JSONResponse) VisitCreateCountryResponse(w http.R
 }
 
 type DeleteCountryRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params DeleteCountryParams
 }
 
 type DeleteCountryResponseObject interface {
@@ -1955,7 +2532,8 @@ func (response DeleteCountry404JSONResponse) VisitDeleteCountryResponse(w http.R
 }
 
 type GetCountryRequestObject struct {
-	Id IDParam `json:"id"`
+	Id     IDParam `json:"id"`
+	Params GetCountryParams
 }
 
 type GetCountryResponseObject interface {
@@ -1991,8 +2569,9 @@ func (response GetCountry404JSONResponse) VisitGetCountryResponse(w http.Respons
 }
 
 type UpdateCountryRequestObject struct {
-	Id   IDParam `json:"id"`
-	Body *UpdateCountryJSONRequestBody
+	Id     IDParam `json:"id"`
+	Params UpdateCountryParams
+	Body   *UpdateCountryJSONRequestBody
 }
 
 type UpdateCountryResponseObject interface {
@@ -2272,8 +2851,10 @@ type strictHandler struct {
 }
 
 // ListAirports operation middleware
-func (sh *strictHandler) ListAirports(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) ListAirports(w http.ResponseWriter, r *http.Request, params ListAirportsParams) {
 	var request ListAirportsRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.ListAirports(ctx, request.(ListAirportsRequestObject))
@@ -2296,8 +2877,10 @@ func (sh *strictHandler) ListAirports(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateAirport operation middleware
-func (sh *strictHandler) CreateAirport(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) CreateAirport(w http.ResponseWriter, r *http.Request, params CreateAirportParams) {
 	var request CreateAirportRequestObject
+
+	request.Params = params
 
 	var body CreateAirportJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -2327,10 +2910,11 @@ func (sh *strictHandler) CreateAirport(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAirport operation middleware
-func (sh *strictHandler) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteAirportParams) {
 	var request DeleteAirportRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DeleteAirport(ctx, request.(DeleteAirportRequestObject))
@@ -2353,10 +2937,11 @@ func (sh *strictHandler) DeleteAirport(w http.ResponseWriter, r *http.Request, i
 }
 
 // GetAirport operation middleware
-func (sh *strictHandler) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam, params GetAirportParams) {
 	var request GetAirportRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetAirport(ctx, request.(GetAirportRequestObject))
@@ -2379,10 +2964,11 @@ func (sh *strictHandler) GetAirport(w http.ResponseWriter, r *http.Request, id I
 }
 
 // UpdateAirport operation middleware
-func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
 	var request UpdateAirportRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	var body UpdateAirportJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -2412,8 +2998,10 @@ func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, i
 }
 
 // ListCities operation middleware
-func (sh *strictHandler) ListCities(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) ListCities(w http.ResponseWriter, r *http.Request, params ListCitiesParams) {
 	var request ListCitiesRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.ListCities(ctx, request.(ListCitiesRequestObject))
@@ -2436,8 +3024,10 @@ func (sh *strictHandler) ListCities(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateCity operation middleware
-func (sh *strictHandler) CreateCity(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) CreateCity(w http.ResponseWriter, r *http.Request, params CreateCityParams) {
 	var request CreateCityRequestObject
+
+	request.Params = params
 
 	var body CreateCityJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -2493,10 +3083,11 @@ func (sh *strictHandler) GetCitiesDropdown(w http.ResponseWriter, r *http.Reques
 }
 
 // DeleteCity operation middleware
-func (sh *strictHandler) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCityParams) {
 	var request DeleteCityRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DeleteCity(ctx, request.(DeleteCityRequestObject))
@@ -2519,10 +3110,11 @@ func (sh *strictHandler) DeleteCity(w http.ResponseWriter, r *http.Request, id I
 }
 
 // GetCity operation middleware
-func (sh *strictHandler) GetCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) GetCity(w http.ResponseWriter, r *http.Request, id IDParam, params GetCityParams) {
 	var request GetCityRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetCity(ctx, request.(GetCityRequestObject))
@@ -2545,10 +3137,11 @@ func (sh *strictHandler) GetCity(w http.ResponseWriter, r *http.Request, id IDPa
 }
 
 // UpdateCity operation middleware
-func (sh *strictHandler) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCityParams) {
 	var request UpdateCityRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	var body UpdateCityJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -2578,8 +3171,10 @@ func (sh *strictHandler) UpdateCity(w http.ResponseWriter, r *http.Request, id I
 }
 
 // ListCountries operation middleware
-func (sh *strictHandler) ListCountries(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) ListCountries(w http.ResponseWriter, r *http.Request, params ListCountriesParams) {
 	var request ListCountriesRequestObject
+
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.ListCountries(ctx, request.(ListCountriesRequestObject))
@@ -2602,8 +3197,10 @@ func (sh *strictHandler) ListCountries(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateCountry operation middleware
-func (sh *strictHandler) CreateCountry(w http.ResponseWriter, r *http.Request) {
+func (sh *strictHandler) CreateCountry(w http.ResponseWriter, r *http.Request, params CreateCountryParams) {
 	var request CreateCountryRequestObject
+
+	request.Params = params
 
 	var body CreateCountryJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -2633,10 +3230,11 @@ func (sh *strictHandler) CreateCountry(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteCountry operation middleware
-func (sh *strictHandler) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam, params DeleteCountryParams) {
 	var request DeleteCountryRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.DeleteCountry(ctx, request.(DeleteCountryRequestObject))
@@ -2659,10 +3257,11 @@ func (sh *strictHandler) DeleteCountry(w http.ResponseWriter, r *http.Request, i
 }
 
 // GetCountry operation middleware
-func (sh *strictHandler) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam, params GetCountryParams) {
 	var request GetCountryRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetCountry(ctx, request.(GetCountryRequestObject))
@@ -2685,10 +3284,11 @@ func (sh *strictHandler) GetCountry(w http.ResponseWriter, r *http.Request, id I
 }
 
 // UpdateCountry operation middleware
-func (sh *strictHandler) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+func (sh *strictHandler) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateCountryParams) {
 	var request UpdateCountryRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	var body UpdateCountryJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
