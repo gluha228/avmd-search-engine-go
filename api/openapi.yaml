@@ -1,0 +1,167 @@
+openapi: 3.0.0
+
+info:
+  title: AVMD Search Engine API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Flights
+
+paths:
+  /api/v1/flights/search:
+    get:
+      tags: [Flights]
+      operationId: searchFlights
+      parameters:
+        - $ref: "#/components/parameters/DepartureAirportCodeParam"
+        - $ref: "#/components/parameters/ArrivalAirportCodeParam"
+        - $ref: "#/components/parameters/DepartureDateParam"
+        - $ref: "#/components/parameters/ReturnDateParam"
+        - $ref: "#/components/parameters/AdultCountParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlightSearchResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    DepartureAirportCodeParam:
+      name: departureAirportCode
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 3
+        pattern: "^[A-Z]{3}$"
+        x-oapi-codegen-extra-tags:
+          validate: required,len=3,uppercase,alpha
+    ArrivalAirportCodeParam:
+      name: arrivalAirportCode
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 3
+        maxLength: 3
+        pattern: "^[A-Z]{3}$"
+        x-oapi-codegen-extra-tags:
+          validate: required,len=3,uppercase,alpha
+    DepartureDateParam:
+      name: departureDate
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        x-oapi-codegen-extra-tags:
+          validate: required
+    ReturnDateParam:
+      name: returnDate
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    AdultCountParam:
+      name: adultCount
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        format: int32
+        x-oapi-codegen-extra-tags:
+          validate: required,min=1
+  schemas:
+    FlightSearchResponse:
+      type: object
+      required: [routing_id, offers]
+      properties:
+        routing_id:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+    Offer:
+      type: object
+      required: [offer_id, outbound_flight, currency_code, price]
+      properties:
+        offer_id:
+          type: string
+        outbound_flight:
+          $ref: "#/components/schemas/Flight"
+        inbound_flight:
+          $ref: "#/components/schemas/Flight"
+        currency_code:
+          type: string
+        price:
+          type: number
+          format: double
+    Flight:
+      type: object
+      required: [departure_airport_code, arrival_airport_code, seats_available, segments, price]
+      properties:
+        departure_airport_code:
+          type: string
+        arrival_airport_code:
+          type: string
+        seats_available:
+          type: integer
+          format: int32
+        price:
+          type: number
+          format: double
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlightSegment"
+    FlightSegment:
+      type: object
+      required: [segment_id, departure_airport_code, arrival_airport_code]
+      properties:
+        segment_id:
+          type: integer
+          format: int32
+        departure_airport_code:
+          type: string
+        arrival_airport_code:
+          type: string
+        departure_time:
+          type: string
+          format: date-time
+        arrival_time:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          format: int32
+        flight_number:
+          type: string
+        travel_class:
+          type: string
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
