@@ -8,6 +8,8 @@ type Config struct {
 	LoggingLevel           string `env:"LOG_LEVEL" envDefault:"INFO"`
 	LoggingAddSource       bool   `env:"LOG_ADD_SOURCE" envDefault:"false"`
 	UseJsonLogs            bool   `env:"LOG_USE_JSON" envDefault:"false"`
+	DatabaseURL            string `env:"DB_URL" envDefault:"postgres://postgres:postgres@localhost:5432/avion?sslmode=disable"`
+	DatabaseAutoMigrate    bool   `env:"DB_AUTO_MIGRATE" envDefault:"true"`
 	RedisAddr              string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
 	RedisPassword          string `env:"REDIS_PASSWORD"`
 	RedisDB                int    `env:"REDIS_DB" envDefault:"0"`

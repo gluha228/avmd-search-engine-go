@@ -6,8 +6,10 @@ import (
 	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/currencies"
+	dbstore "avmd-search-engine-go/internal/db"
 	"avmd-search-engine-go/internal/flights"
 	flightsession "avmd-search-engine-go/internal/flights/session"
+	"avmd-search-engine-go/internal/geo"
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
 	"log/slog"
@@ -26,6 +28,7 @@ type HttpServer struct {
 	calendarService *calendar.Service
 	currencyService *currencies.Service
 	flightService   *flights.Service
+	geoService      *geo.Service
 	logger          *slog.Logger
 	validator       *validator.Validate
 }
@@ -52,6 +55,13 @@ func (s *HttpServer) InitHandlers() {
 		Password: s.cfg.RedisPassword,
 		DB:       s.cfg.RedisDB,
 	})
+	db, err := dbstore.CreateConnection(context.Background(), s.cfg)
+	if err != nil && s.logger != nil {
+		s.logger.Warn("failed to initialize postgres connection", "error", err)
+	}
+	if err == nil {
+		s.geoService = geo.NewService(geo.NewSQLCRepository(db))
+	}
 	sessionStore := flightsession.NewRedisStore(
 		redisClient,
 		time.Duration(s.cfg.RedisSessionTTLHours)*time.Hour,
@@ -82,11 +92,20 @@ func (s *HttpServer) CreateHandler() http.Handler {
 	r := chi.NewRouter()
 	strictServer := api.NewStrictHandler(s, nil)
 	r.Use(middleware.Logger)
+	r.Use(withRequestContext)
 	r.Get("/v3/api-docs", serveOpenAPISpec)
 	r.Get("/swagger-ui", redirectToSwaggerUI)
 	r.Get("/swagger-ui/", redirectToSwaggerUI)
 	r.Get("/swagger-ui/index.html", serveSwaggerUI)
 	return api.HandlerFromMux(strictServer, r)
+}
+
+type requestContextKey struct{}
+
+func withRequestContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestContextKey{}, r)))
+	})
 }
 
 func serveOpenAPISpec(w http.ResponseWriter, r *http.Request) {

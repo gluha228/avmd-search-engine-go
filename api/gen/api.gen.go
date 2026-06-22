@@ -17,9 +17,78 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Airport defines model for Airport.
+type Airport struct {
+	CityId   int64    `json:"city_id"`
+	IataCode *string  `json:"iata_code,omitempty"`
+	IcaoCode *string  `json:"icao_code,omitempty"`
+	Id       int64    `json:"id"`
+	Lat      *float64 `json:"lat,omitempty"`
+	Lon      *float64 `json:"lon,omitempty"`
+}
+
+// AirportRequest defines model for AirportRequest.
+type AirportRequest struct {
+	CityId   int64    `json:"city_id"`
+	IataCode *string  `json:"iata_code,omitempty"`
+	IcaoCode *string  `json:"icao_code,omitempty"`
+	Lat      *float64 `json:"lat,omitempty"`
+	Lon      *float64 `json:"lon,omitempty"`
+}
+
 // CalendarResponse defines model for CalendarResponse.
 type CalendarResponse struct {
 	Calendar []FlightDay `json:"calendar"`
+}
+
+// City defines model for City.
+type City struct {
+	CountryId  int64   `json:"country_id"`
+	Id         int64   `json:"id"`
+	IsCapital  bool    `json:"is_capital"`
+	NameEn     string  `json:"name_en"`
+	NameRo     string  `json:"name_ro"`
+	NameRu     string  `json:"name_ru"`
+	Population *int64  `json:"population,omitempty"`
+	Timezone   *string `json:"timezone,omitempty"`
+}
+
+// CityDropdown defines model for CityDropdown.
+type CityDropdown struct {
+	AirportCode string `json:"airport_code"`
+	CountryName string `json:"country_name"`
+	Id          int64  `json:"id"`
+	Name        string `json:"name"`
+}
+
+// CityRequest defines model for CityRequest.
+type CityRequest struct {
+	CountryId  int64   `json:"country_id"`
+	IsCapital  *bool   `json:"is_capital,omitempty"`
+	NameEn     string  `json:"name_en"`
+	NameRo     string  `json:"name_ro"`
+	NameRu     string  `json:"name_ru"`
+	Population *int64  `json:"population,omitempty"`
+	Timezone   *string `json:"timezone,omitempty"`
+}
+
+// Country defines model for Country.
+type Country struct {
+	Id     int64  `json:"id"`
+	Iso2   string `json:"iso2"`
+	Iso3   string `json:"iso3"`
+	NameEn string `json:"name_en"`
+	NameRo string `json:"name_ro"`
+	NameRu string `json:"name_ru"`
+}
+
+// CountryRequest defines model for CountryRequest.
+type CountryRequest struct {
+	Iso2   string `json:"iso2"`
+	Iso3   string `json:"iso3"`
+	NameEn string `json:"name_en"`
+	NameRo string `json:"name_ro"`
+	NameRu string `json:"name_ru"`
 }
 
 // Error defines model for Error.
@@ -79,8 +148,14 @@ type DepartureOutboundFromParam = string
 // DepartureOutboundToParam defines model for DepartureOutboundToParam.
 type DepartureOutboundToParam = string
 
+// IDParam defines model for IDParam.
+type IDParam = int64
+
 // InfantCountParam defines model for InfantCountParam.
 type InfantCountParam = int32
+
+// LimitParam defines model for LimitParam.
+type LimitParam = int32
 
 // MaxIndividualSegmentDurationMinutesParam defines model for MaxIndividualSegmentDurationMinutesParam.
 type MaxIndividualSegmentDurationMinutesParam = int32
@@ -112,8 +187,30 @@ type MinSegmentsParam = int32
 // MinTotalDurationMinutesParam defines model for MinTotalDurationMinutesParam.
 type MinTotalDurationMinutesParam = int32
 
+// OriginAirportCodeParam defines model for OriginAirportCodeParam.
+type OriginAirportCodeParam = string
+
 // ReturnDateParam defines model for ReturnDateParam.
 type ReturnDateParam = openapi_types.Date
+
+// SearchParam defines model for SearchParam.
+type SearchParam = string
+
+// BadRequest defines model for BadRequest.
+type BadRequest = Error
+
+// InternalError defines model for InternalError.
+type InternalError = Error
+
+// NotFound defines model for NotFound.
+type NotFound = Error
+
+// GetCitiesDropdownParams defines parameters for GetCitiesDropdown.
+type GetCitiesDropdownParams struct {
+	Search            SearchParam             `form:"search" json:"search"`
+	OriginAirportCode *OriginAirportCodeParam `form:"originAirportCode,omitempty" json:"originAirportCode,omitempty"`
+	Limit             *LimitParam             `form:"limit,omitempty" json:"limit,omitempty"`
+}
 
 // GetCalendarParams defines parameters for GetCalendar.
 type GetCalendarParams struct {
@@ -152,8 +249,74 @@ type SearchFlightsParams struct {
 	ArrivalInboundTo                    *ArrivalInboundToParam                    `form:"arrivalInboundTo,omitempty" json:"arrivalInboundTo,omitempty"`
 }
 
+// CreateAirportJSONRequestBody defines body for CreateAirport for application/json ContentType.
+type CreateAirportJSONRequestBody = AirportRequest
+
+// UpdateAirportJSONRequestBody defines body for UpdateAirport for application/json ContentType.
+type UpdateAirportJSONRequestBody = AirportRequest
+
+// CreateCityJSONRequestBody defines body for CreateCity for application/json ContentType.
+type CreateCityJSONRequestBody = CityRequest
+
+// UpdateCityJSONRequestBody defines body for UpdateCity for application/json ContentType.
+type UpdateCityJSONRequestBody = CityRequest
+
+// CreateCountryJSONRequestBody defines body for CreateCountry for application/json ContentType.
+type CreateCountryJSONRequestBody = CountryRequest
+
+// UpdateCountryJSONRequestBody defines body for UpdateCountry for application/json ContentType.
+type UpdateCountryJSONRequestBody = CountryRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+
+	// (GET /api/v1/airports)
+	ListAirports(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/v1/airports)
+	CreateAirport(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /api/v1/airports/{id})
+	DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (GET /api/v1/airports/{id})
+	GetAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (PUT /api/v1/airports/{id})
+	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (GET /api/v1/cities)
+	ListCities(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/v1/cities)
+	CreateCity(w http.ResponseWriter, r *http.Request)
+
+	// (GET /api/v1/cities/dropdown)
+	GetCitiesDropdown(w http.ResponseWriter, r *http.Request, params GetCitiesDropdownParams)
+
+	// (DELETE /api/v1/cities/{id})
+	DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (GET /api/v1/cities/{id})
+	GetCity(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (PUT /api/v1/cities/{id})
+	UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (GET /api/v1/countries)
+	ListCountries(w http.ResponseWriter, r *http.Request)
+
+	// (POST /api/v1/countries)
+	CreateCountry(w http.ResponseWriter, r *http.Request)
+
+	// (DELETE /api/v1/countries/{id})
+	DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (GET /api/v1/countries/{id})
+	GetCountry(w http.ResponseWriter, r *http.Request, id IDParam)
+
+	// (PUT /api/v1/countries/{id})
+	UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam)
 
 	// (GET /api/v1/flights/calendar)
 	GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams)
@@ -165,6 +328,86 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// (GET /api/v1/airports)
+func (_ Unimplemented) ListAirports(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /api/v1/airports)
+func (_ Unimplemented) CreateAirport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (DELETE /api/v1/airports/{id})
+func (_ Unimplemented) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/airports/{id})
+func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /api/v1/airports/{id})
+func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/cities)
+func (_ Unimplemented) ListCities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /api/v1/cities)
+func (_ Unimplemented) CreateCity(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/cities/dropdown)
+func (_ Unimplemented) GetCitiesDropdown(w http.ResponseWriter, r *http.Request, params GetCitiesDropdownParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (DELETE /api/v1/cities/{id})
+func (_ Unimplemented) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/cities/{id})
+func (_ Unimplemented) GetCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /api/v1/cities/{id})
+func (_ Unimplemented) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/countries)
+func (_ Unimplemented) ListCountries(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /api/v1/countries)
+func (_ Unimplemented) CreateCountry(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (DELETE /api/v1/countries/{id})
+func (_ Unimplemented) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/countries/{id})
+func (_ Unimplemented) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PUT /api/v1/countries/{id})
+func (_ Unimplemented) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // (GET /api/v1/flights/calendar)
 func (_ Unimplemented) GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams) {
@@ -184,6 +427,383 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListAirports operation middleware
+func (siw *ServerInterfaceWrapper) ListAirports(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAirports(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateAirport operation middleware
+func (siw *ServerInterfaceWrapper) CreateAirport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateAirport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAirport operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAirport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAirport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAirport operation middleware
+func (siw *ServerInterfaceWrapper) GetAirport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAirport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAirport operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAirport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCities operation middleware
+func (siw *ServerInterfaceWrapper) ListCities(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCity operation middleware
+func (siw *ServerInterfaceWrapper) CreateCity(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCitiesDropdown operation middleware
+func (siw *ServerInterfaceWrapper) GetCitiesDropdown(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCitiesDropdownParams
+
+	// ------------- Required query parameter "search" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "search", r.URL.Query(), &params.Search, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "search"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "search", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "originAirportCode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "originAirportCode", r.URL.Query(), &params.OriginAirportCode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "originAirportCode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "originAirportCode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCitiesDropdown(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCity operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCity operation middleware
+func (siw *ServerInterfaceWrapper) GetCity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCity operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCountries operation middleware
+func (siw *ServerInterfaceWrapper) ListCountries(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCountries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCountry operation middleware
+func (siw *ServerInterfaceWrapper) CreateCountry(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCountry(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCountry operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCountry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCountry(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCountry operation middleware
+func (siw *ServerInterfaceWrapper) GetCountry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCountry(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCountry operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCountry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id IDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCountry(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetCalendar operation middleware
 func (siw *ServerInterfaceWrapper) GetCalendar(w http.ResponseWriter, r *http.Request) {
@@ -716,6 +1336,54 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/airports", wrapper.ListAirports)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/airports", wrapper.CreateAirport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/airports/{id}", wrapper.DeleteAirport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/airports/{id}", wrapper.GetAirport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/airports/{id}", wrapper.UpdateAirport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cities", wrapper.ListCities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/cities", wrapper.CreateCity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cities/dropdown", wrapper.GetCitiesDropdown)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/cities/{id}", wrapper.DeleteCity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/cities/{id}", wrapper.GetCity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/cities/{id}", wrapper.UpdateCity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/countries", wrapper.ListCountries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/countries", wrapper.CreateCountry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/countries/{id}", wrapper.DeleteCountry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/countries/{id}", wrapper.GetCountry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/countries/{id}", wrapper.UpdateCountry)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/flights/calendar", wrapper.GetCalendar)
 	})
 	r.Group(func(r chi.Router) {
@@ -723,6 +1391,668 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 
 	return r
+}
+
+type BadRequestJSONResponse Error
+
+type InternalErrorJSONResponse Error
+
+type NotFoundJSONResponse Error
+
+type ListAirportsRequestObject struct {
+}
+
+type ListAirportsResponseObject interface {
+	VisitListAirportsResponse(w http.ResponseWriter) error
+}
+
+type ListAirports200JSONResponse []Airport
+
+func (response ListAirports200JSONResponse) VisitListAirportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAirportRequestObject struct {
+	Body *CreateAirportJSONRequestBody
+}
+
+type CreateAirportResponseObject interface {
+	VisitCreateAirportResponse(w http.ResponseWriter) error
+}
+
+type CreateAirport201JSONResponse Airport
+
+func (response CreateAirport201JSONResponse) VisitCreateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAirport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateAirport400JSONResponse) VisitCreateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateAirport500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateAirport500JSONResponse) VisitCreateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteAirportRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type DeleteAirportResponseObject interface {
+	VisitDeleteAirportResponse(w http.ResponseWriter) error
+}
+
+type DeleteAirport204Response struct {
+}
+
+func (response DeleteAirport204Response) VisitDeleteAirportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteAirport404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteAirport404JSONResponse) VisitDeleteAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAirportRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type GetAirportResponseObject interface {
+	VisitGetAirportResponse(w http.ResponseWriter) error
+}
+
+type GetAirport200JSONResponse Airport
+
+func (response GetAirport200JSONResponse) VisitGetAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAirport404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetAirport404JSONResponse) VisitGetAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAirportRequestObject struct {
+	Id   IDParam `json:"id"`
+	Body *UpdateAirportJSONRequestBody
+}
+
+type UpdateAirportResponseObject interface {
+	VisitUpdateAirportResponse(w http.ResponseWriter) error
+}
+
+type UpdateAirport200JSONResponse Airport
+
+func (response UpdateAirport200JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAirport400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateAirport400JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAirport404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateAirport404JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateAirport500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCitiesRequestObject struct {
+}
+
+type ListCitiesResponseObject interface {
+	VisitListCitiesResponse(w http.ResponseWriter) error
+}
+
+type ListCities200JSONResponse []City
+
+func (response ListCities200JSONResponse) VisitListCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCityRequestObject struct {
+	Body *CreateCityJSONRequestBody
+}
+
+type CreateCityResponseObject interface {
+	VisitCreateCityResponse(w http.ResponseWriter) error
+}
+
+type CreateCity201JSONResponse City
+
+func (response CreateCity201JSONResponse) VisitCreateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCity400JSONResponse) VisitCreateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCity500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateCity500JSONResponse) VisitCreateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCitiesDropdownRequestObject struct {
+	Params GetCitiesDropdownParams
+}
+
+type GetCitiesDropdownResponseObject interface {
+	VisitGetCitiesDropdownResponse(w http.ResponseWriter) error
+}
+
+type GetCitiesDropdown200JSONResponse []CityDropdown
+
+func (response GetCitiesDropdown200JSONResponse) VisitGetCitiesDropdownResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCitiesDropdown400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCitiesDropdown400JSONResponse) VisitGetCitiesDropdownResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCitiesDropdown500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCitiesDropdown500JSONResponse) VisitGetCitiesDropdownResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCityRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type DeleteCityResponseObject interface {
+	VisitDeleteCityResponse(w http.ResponseWriter) error
+}
+
+type DeleteCity204Response struct {
+}
+
+func (response DeleteCity204Response) VisitDeleteCityResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCity404JSONResponse) VisitDeleteCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCityRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type GetCityResponseObject interface {
+	VisitGetCityResponse(w http.ResponseWriter) error
+}
+
+type GetCity200JSONResponse City
+
+func (response GetCity200JSONResponse) VisitGetCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCity404JSONResponse) VisitGetCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCityRequestObject struct {
+	Id   IDParam `json:"id"`
+	Body *UpdateCityJSONRequestBody
+}
+
+type UpdateCityResponseObject interface {
+	VisitUpdateCityResponse(w http.ResponseWriter) error
+}
+
+type UpdateCity200JSONResponse City
+
+func (response UpdateCity200JSONResponse) VisitUpdateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCity400JSONResponse) VisitUpdateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCity404JSONResponse) VisitUpdateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCity500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateCity500JSONResponse) VisitUpdateCityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCountriesRequestObject struct {
+}
+
+type ListCountriesResponseObject interface {
+	VisitListCountriesResponse(w http.ResponseWriter) error
+}
+
+type ListCountries200JSONResponse []Country
+
+func (response ListCountries200JSONResponse) VisitListCountriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCountryRequestObject struct {
+	Body *CreateCountryJSONRequestBody
+}
+
+type CreateCountryResponseObject interface {
+	VisitCreateCountryResponse(w http.ResponseWriter) error
+}
+
+type CreateCountry201JSONResponse Country
+
+func (response CreateCountry201JSONResponse) VisitCreateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCountry400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCountry400JSONResponse) VisitCreateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCountry500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateCountry500JSONResponse) VisitCreateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCountryRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type DeleteCountryResponseObject interface {
+	VisitDeleteCountryResponse(w http.ResponseWriter) error
+}
+
+type DeleteCountry204Response struct {
+}
+
+func (response DeleteCountry204Response) VisitDeleteCountryResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCountry404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCountry404JSONResponse) VisitDeleteCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCountryRequestObject struct {
+	Id IDParam `json:"id"`
+}
+
+type GetCountryResponseObject interface {
+	VisitGetCountryResponse(w http.ResponseWriter) error
+}
+
+type GetCountry200JSONResponse Country
+
+func (response GetCountry200JSONResponse) VisitGetCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCountry404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCountry404JSONResponse) VisitGetCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCountryRequestObject struct {
+	Id   IDParam `json:"id"`
+	Body *UpdateCountryJSONRequestBody
+}
+
+type UpdateCountryResponseObject interface {
+	VisitUpdateCountryResponse(w http.ResponseWriter) error
+}
+
+type UpdateCountry200JSONResponse Country
+
+func (response UpdateCountry200JSONResponse) VisitUpdateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCountry400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCountry400JSONResponse) VisitUpdateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCountry404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCountry404JSONResponse) VisitUpdateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCountry500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateCountry500JSONResponse) VisitUpdateCountryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetCalendarRequestObject struct {
@@ -857,6 +2187,54 @@ func (response SearchFlights500JSONResponse) VisitSearchFlightsResponse(w http.R
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (GET /api/v1/airports)
+	ListAirports(ctx context.Context, request ListAirportsRequestObject) (ListAirportsResponseObject, error)
+
+	// (POST /api/v1/airports)
+	CreateAirport(ctx context.Context, request CreateAirportRequestObject) (CreateAirportResponseObject, error)
+
+	// (DELETE /api/v1/airports/{id})
+	DeleteAirport(ctx context.Context, request DeleteAirportRequestObject) (DeleteAirportResponseObject, error)
+
+	// (GET /api/v1/airports/{id})
+	GetAirport(ctx context.Context, request GetAirportRequestObject) (GetAirportResponseObject, error)
+
+	// (PUT /api/v1/airports/{id})
+	UpdateAirport(ctx context.Context, request UpdateAirportRequestObject) (UpdateAirportResponseObject, error)
+
+	// (GET /api/v1/cities)
+	ListCities(ctx context.Context, request ListCitiesRequestObject) (ListCitiesResponseObject, error)
+
+	// (POST /api/v1/cities)
+	CreateCity(ctx context.Context, request CreateCityRequestObject) (CreateCityResponseObject, error)
+
+	// (GET /api/v1/cities/dropdown)
+	GetCitiesDropdown(ctx context.Context, request GetCitiesDropdownRequestObject) (GetCitiesDropdownResponseObject, error)
+
+	// (DELETE /api/v1/cities/{id})
+	DeleteCity(ctx context.Context, request DeleteCityRequestObject) (DeleteCityResponseObject, error)
+
+	// (GET /api/v1/cities/{id})
+	GetCity(ctx context.Context, request GetCityRequestObject) (GetCityResponseObject, error)
+
+	// (PUT /api/v1/cities/{id})
+	UpdateCity(ctx context.Context, request UpdateCityRequestObject) (UpdateCityResponseObject, error)
+
+	// (GET /api/v1/countries)
+	ListCountries(ctx context.Context, request ListCountriesRequestObject) (ListCountriesResponseObject, error)
+
+	// (POST /api/v1/countries)
+	CreateCountry(ctx context.Context, request CreateCountryRequestObject) (CreateCountryResponseObject, error)
+
+	// (DELETE /api/v1/countries/{id})
+	DeleteCountry(ctx context.Context, request DeleteCountryRequestObject) (DeleteCountryResponseObject, error)
+
+	// (GET /api/v1/countries/{id})
+	GetCountry(ctx context.Context, request GetCountryRequestObject) (GetCountryResponseObject, error)
+
+	// (PUT /api/v1/countries/{id})
+	UpdateCountry(ctx context.Context, request UpdateCountryRequestObject) (UpdateCountryResponseObject, error)
+
 	// (GET /api/v1/flights/calendar)
 	GetCalendar(ctx context.Context, request GetCalendarRequestObject) (GetCalendarResponseObject, error)
 
@@ -891,6 +2269,452 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListAirports operation middleware
+func (sh *strictHandler) ListAirports(w http.ResponseWriter, r *http.Request) {
+	var request ListAirportsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAirports(ctx, request.(ListAirportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAirports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListAirportsResponseObject); ok {
+		if err := validResponse.VisitListAirportsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateAirport operation middleware
+func (sh *strictHandler) CreateAirport(w http.ResponseWriter, r *http.Request) {
+	var request CreateAirportRequestObject
+
+	var body CreateAirportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateAirport(ctx, request.(CreateAirportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateAirport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateAirportResponseObject); ok {
+		if err := validResponse.VisitCreateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteAirport operation middleware
+func (sh *strictHandler) DeleteAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request DeleteAirportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteAirport(ctx, request.(DeleteAirportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteAirport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteAirportResponseObject); ok {
+		if err := validResponse.VisitDeleteAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAirport operation middleware
+func (sh *strictHandler) GetAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request GetAirportRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAirport(ctx, request.(GetAirportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAirport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAirportResponseObject); ok {
+		if err := validResponse.VisitGetAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateAirport operation middleware
+func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request UpdateAirportRequestObject
+
+	request.Id = id
+
+	var body UpdateAirportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateAirport(ctx, request.(UpdateAirportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateAirport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateAirportResponseObject); ok {
+		if err := validResponse.VisitUpdateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCities operation middleware
+func (sh *strictHandler) ListCities(w http.ResponseWriter, r *http.Request) {
+	var request ListCitiesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCities(ctx, request.(ListCitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCitiesResponseObject); ok {
+		if err := validResponse.VisitListCitiesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCity operation middleware
+func (sh *strictHandler) CreateCity(w http.ResponseWriter, r *http.Request) {
+	var request CreateCityRequestObject
+
+	var body CreateCityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCity(ctx, request.(CreateCityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCityResponseObject); ok {
+		if err := validResponse.VisitCreateCityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCitiesDropdown operation middleware
+func (sh *strictHandler) GetCitiesDropdown(w http.ResponseWriter, r *http.Request, params GetCitiesDropdownParams) {
+	var request GetCitiesDropdownRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCitiesDropdown(ctx, request.(GetCitiesDropdownRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCitiesDropdown")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCitiesDropdownResponseObject); ok {
+		if err := validResponse.VisitGetCitiesDropdownResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCity operation middleware
+func (sh *strictHandler) DeleteCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request DeleteCityRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCity(ctx, request.(DeleteCityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCityResponseObject); ok {
+		if err := validResponse.VisitDeleteCityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCity operation middleware
+func (sh *strictHandler) GetCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request GetCityRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCity(ctx, request.(GetCityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCityResponseObject); ok {
+		if err := validResponse.VisitGetCityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCity operation middleware
+func (sh *strictHandler) UpdateCity(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request UpdateCityRequestObject
+
+	request.Id = id
+
+	var body UpdateCityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCity(ctx, request.(UpdateCityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCityResponseObject); ok {
+		if err := validResponse.VisitUpdateCityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCountries operation middleware
+func (sh *strictHandler) ListCountries(w http.ResponseWriter, r *http.Request) {
+	var request ListCountriesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCountries(ctx, request.(ListCountriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCountries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCountriesResponseObject); ok {
+		if err := validResponse.VisitListCountriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCountry operation middleware
+func (sh *strictHandler) CreateCountry(w http.ResponseWriter, r *http.Request) {
+	var request CreateCountryRequestObject
+
+	var body CreateCountryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCountry(ctx, request.(CreateCountryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCountry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCountryResponseObject); ok {
+		if err := validResponse.VisitCreateCountryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCountry operation middleware
+func (sh *strictHandler) DeleteCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request DeleteCountryRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCountry(ctx, request.(DeleteCountryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCountry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCountryResponseObject); ok {
+		if err := validResponse.VisitDeleteCountryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCountry operation middleware
+func (sh *strictHandler) GetCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request GetCountryRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCountry(ctx, request.(GetCountryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCountry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCountryResponseObject); ok {
+		if err := validResponse.VisitGetCountryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCountry operation middleware
+func (sh *strictHandler) UpdateCountry(w http.ResponseWriter, r *http.Request, id IDParam) {
+	var request UpdateCountryRequestObject
+
+	request.Id = id
+
+	var body UpdateCountryJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCountry(ctx, request.(UpdateCountryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCountry")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCountryResponseObject); ok {
+		if err := validResponse.VisitUpdateCountryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetCalendar operation middleware

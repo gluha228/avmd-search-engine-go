@@ -1,0 +1,251 @@
+id,name_en,name_ro,name_ru,iso3,iso2
+1,Andorra,Andorra,Андорра,AND,AD
+2,United Arab Emirates,Emiratele Arabe Unite,ОАЭ,ARE,AE
+3,Afghanistan,Afganistan,Афганистан,AFG,AF
+4,Antigua and Barbuda,Antigua și Barbuda,Антигуа и Барбуда,ATG,AG
+5,Anguilla,Anguilla,Ангилья,AIA,AI
+6,Albania,Albania,Албания,ALB,AL
+7,Armenia,Armenia,Армения,ARM,AM
+8,Angola,Angola,Ангола,AGO,AO
+9,Antarctica,Antarctica,Антарктида,ATA,AQ
+10,Argentina,Argentina,Аргентина,ARG,AR
+11,American Samoa,Samoa Americană,Американское Самоа,ASM,AS
+12,Austria,Austria,Австрия,AUT,AT
+13,Australia,Australia,Австралия,AUS,AU
+14,Aruba,Aruba,Аруба,ABW,AW
+15,Aland Islands,Insulele Åland,Аландские о-ва,ALA,AX
+16,Azerbaijan,Azerbaijan,Азербайджан,AZE,AZ
+17,Bosnia and Herzegovina,Bosnia și Herțegovina,Босния и Герцеговина,BIH,BA
+18,Barbados,Barbados,Барбадос,BRB,BB
+19,Bangladesh,Bangladeș,Бангладеш,BGD,BD
+20,Belgium,Belgia,Бельгия,BEL,BE
+21,Burkina Faso,Burkina Fasso,Буркина-Фасо,BFA,BF
+22,Bulgaria,Bulgaria,Болгария,BGR,BG
+23,Bahrain,Bahrain,Бахрейн,BHR,BH
+24,Burundi,Burundi,Бурунди,BDI,BI
+25,Benin,Benin,Бенин,BEN,BJ
+26,Saint Barthelemy,Saint-Barthélemy,Сен-Бартелеми,BLM,BL
+27,Bermuda,Bermuda,Бермудские о-ва,BMU,BM
+28,Brunei,Brunei,Бруней-Даруссалам,BRN,BN
+29,Bolivia,Bolivia,Боливия,BOL,BO
+30,Caribbean Netherlands,Insulele Caraibe Olandeze,"Бонэйр, Синт-Эстатиус и Саба",BES,BQ
+31,Brazil,Brazilia,Бразилия,BRA,BR
+32,Bahamas,Bahamas,Багамы,BHS,BS
+33,Bhutan,Bhutan,Бутан,BTN,BT
+34,Bouvet Island,Insula Bouvet,о-в Буве,BVT,BV
+35,Botswana,Botswana,Ботсвана,BWA,BW
+36,Belarus,Belarus,Беларусь,BLR,BY
+37,Belize,Belize,Белиз,BLZ,BZ
+38,Canada,Canada,Канада,CAN,CA
+39,Cocos (Keeling) Islands,Insulele Cocos (Keeling),Кокосовые о-ва,CCK,CC
+40,Democratic Republic of Congo,"Congo, Republica Democratică",Заир,COD,CD
+41,Central African Republic,Republica Centrafricană,Центрально-Африканская Республика,CAF,CF
+42,Congo Republic,Congo (Republica),Республика Конго,COG,CG
+43,Switzerland,Elveția,Швейцария,CHE,CH
+44,Ivory Coast,Côte d'Ivoire,Кот-д'Ивуар,CIV,CI
+45,Cook Islands,Insulele Cook,Острова Кука,COK,CK
+46,Chile,Chile,Чили,CHL,CL
+47,Cameroon,Camerun,Камерун,CMR,CM
+48,China,China,Китай,CHN,CN
+49,Colombia,Columbia,Колумбия,COL,CO
+50,Costa Rica,Costa Rica,Коста-Рика,CRI,CR
+51,Cuba,Cuba,Куба,CUB,CU
+52,Cabo Verde,Capul Verde,Кабо-Верде,CPV,CV
+53,Curacao,Curaçao,Кюрасао,CUW,CW
+54,Christmas Island,Insula Christmas,о-в Рождества,CXR,CX
+55,Cyprus,Cipru,Кипр,CYP,CY
+56,Czech Republic,Cehia,Чехия,CZE,CZ
+57,Germany,Germania,Германия,DEU,DE
+58,Djibouti,Djibouti,Джибути,DJI,DJ
+59,Denmark,Danemarca,Дания,DNK,DK
+60,Dominica,Dominica,Доминика,DMA,DM
+61,Dominican Republic,Republica Dominicană,Доминиканская Республика,DOM,DO
+62,Algeria,Algeria,Алжир,DZA,DZ
+63,Ecuador,Ecuador,Эквадор,ECU,EC
+64,Estonia,Estonia,Эстония,EST,EE
+65,Egypt,Egipt,Египет,EGY,EG
+66,Western Sahara,Sahara Occidentală,Западная Сахара,ESH,EH
+67,Eritrea,Eritreea,Эритрея,ERI,ER
+68,Spain,Spania,Испания,ESP,ES
+69,Ethiopia,Etiopia,Эфиопия,ETH,ET
+70,Finland,Finlanda,Финляндия,FIN,FI
+71,Fiji,Fiji,Фиджи,FJI,FJ
+72,Falkland Islands,Insulele Falkland,Фолклендские о-ва,FLK,FK
+73,Federated States of Micronesia,Micronezia,Микронезия,FSM,FM
+74,Faroe Islands,Insulele Feroe,Фарерские о-ва,FRO,FO
+75,France,Franța,Франция,FRA,FR
+76,Gabon,Gabon,Габон,GAB,GA
+77,United Kingdom,Regatul Unit,Британия,GBR,GB
+78,Grenada,Grenada,Гренада,GRD,GD
+79,Georgia,Georgia,Грузия,GEO,GE
+80,French Guiana,Guyana Franceză,Французская Гвиана,GUF,GF
+81,Guernsey,Guernsey,Гернси,GGY,GG
+82,Ghana,Ghana,Гана,GHA,GH
+83,Gibraltar,Gibraltar,Гибралтар,GIB,GI
+84,Greenland,Groenlanda,Гренландия,GRL,GL
+85,The Gambia,Gambia,Гамбия,GMB,GM
+86,Guinea,Guinea,Гвинея,GIN,GN
+87,Guadeloupe,Guadelupa,Гваделупа,GLP,GP
+88,Equatorial Guinea,Guineea Ecuatorială,Экваториальная Гвинея,GNQ,GQ
+89,Greece,Grecia,Греция,GRC,GR
+90,South Georgia and the South Sandwich Islands,Georgia de Sud și Insulele Sandwich de Sud,Южная Георгия и Южные Сандвичевы о-ва,SGS,GS
+91,Guatemala,Guatemala,Гватемала,GTM,GT
+92,Guam,Guam,Гуам,GUM,GU
+93,Guinea-Bissau,Guinea-Bissau,Гвинея-Бисау,GNB,GW
+94,Guyana,Guiana,Гайана,GUY,GY
+95,Hong Kong S.A.R,Hong Kong,Гонконг,HKG,HK
+96,Heard and McDonald Islands,Insula Heard și Insulele McDonald,о-ва Херд и Макдональд,HMD,HM
+97,Honduras,Honduras,Гондурас,HND,HN
+98,Croatia,Croația,Хорватия,HRV,HR
+99,Haiti,Haiti,Гаити,HTI,HT
+100,Hungary,Ungaria,Венгрия,HUN,HU
+101,Indonesia,Indonezia,Индонезия,IDN,ID
+102,Ireland,Irlanda,Ирландия,IRL,IE
+103,Israel,Israel,Израиль,ISR,IL
+104,Isle of Man,Insulele Man,о-в Мэн,IMN,IM
+105,India,India,Индия,IND,IN
+106,British Indian Ocean Territory,Teritoriul Britanic din Oceanul Indian,Британская территория в Индийском океане,IOT,IO
+107,Iraq,Irak,Ирак,IRQ,IQ
+108,Iran,Iran (Republica islamică),Иран,IRN,IR
+109,Iceland,Islanda,Исландия,ISL,IS
+110,Italy,Italia,Италия,ITA,IT
+111,Jersey,Jersey,Джерси,JEY,JE
+112,Jamaica,Jamaica,Ямайка,JAM,JM
+113,Hashemite Kingdom of Jordan,Iordania,Иордания,JOR,JO
+114,Japan,Japonia,Япония,JPN,JP
+115,Kenya,Kenya,Кения,KEN,KE
+116,Kyrgyzstan,Kârgâzstan,Кыргызстан,KGZ,KG
+117,Cambodia,Cambodgia,Камбоджа,KHM,KH
+118,Kiribati,Kiribati,Кирибати,KIR,KI
+119,Comoros,Comore,Коморы,COM,KM
+120,Saint Kitts and Nevis,Sain Kitts și Nevis,Сент-Китс и Невис,KNA,KN
+121,North Korea,Coreea de Nord,КНДР,PRK,KP
+122,Republic of Korea,Coreea de Sud,Республика Корея,KOR,KR
+123,Kosovo,Kosovo,Косово,XKX,XK
+124,Kuwait,Kuweit,Кувейт,KWT,KW
+125,Cayman Islands,Insulele Cayman,Острова Кайман,CYM,KY
+126,Kazakhstan,Kazahstan,Казахстан,KAZ,KZ
+127,Laos,Laos,Лаос,LAO,LA
+128,Lebanon,Liban,Ливан,LBN,LB
+129,Saint Lucia,Sfânta Lucia,Сент-Люсия,LCA,LC
+130,Liechtenstein,Liechtenstein,Лихтенштейн,LIE,LI
+131,Sri Lanka,Sri Lanka,Шри-Ланка,LKA,LK
+132,Liberia,Liberia,Либерия,LBR,LR
+133,Lesotho,Lesotho,Лесото,LSO,LS
+134,Republic of Lithuania,Lituania,Литва,LTU,LT
+135,Luxembourg,Luxemburg,Люксембург,LUX,LU
+136,Latvia,Letonia,Латвия,LVA,LV
+137,Libya,Libia,Ливия,LBY,LY
+138,Morocco,Maroc,Марокко,MAR,MA
+139,Principality of Monaco,Monaco,Монако,MCO,MC
+140,Republic of Moldova,Republica Moldova,Молдова,MDA,MD
+141,Montenegro,Muntenegru,Черногория,MNE,ME
+142,Saint Martin,Sfântul Martin,Остров Святого Мартина,MAF,MF
+143,Madagascar,Madagascar,Мадагаскар,MDG,MG
+144,Marshall Islands,Insulele Marshall,Маршалловы Острова,MHL,MH
+145,North Macedonia,Macedonia de Nord,Северная Македония,MKD,MK
+146,Mali,Mali,Мали,MLI,ML
+147,Myanmar,Myanmar (Birmania),Мьянма (Бирма),MMR,MM
+148,Mongolia,Mongolia,Монголия,MNG,MN
+149,Macao S.A.R,Macao,Макао,MAC,MO
+150,Northern Mariana Islands,Insulele Mariane de Nord,Северные Марианские о-ва,MNP,MP
+151,Martinique,Martinica,Мартиника,MTQ,MQ
+152,Mauritania,Mauritania,Мавритания,MRT,MR
+153,Montserrat,Montserrat,Монсеррат,MSR,MS
+154,Malta,Malta,Мальта,MLT,MT
+155,Mauritius,Mauritius,Маврикий,MUS,MU
+156,Maldives,Maldive,Мальдивы,MDV,MV
+157,Malawi,Malawi,Малави,MWI,MW
+158,Mexico,Mexic,Мексика,MEX,MX
+159,Malaysia,Malaiezia,Малайзия,MYS,MY
+160,Mozambique,Mozambic,Мозамбик,MOZ,MZ
+161,Namibia,Namibia,Намибия,NAM,NA
+162,New Caledonia,Noua Caledonie,Новая Каледония,NCL,NC
+163,Niger,Niger,Нигер,NER,NE
+164,Norfolk Island,Insula Norfolk,о-в Норфолк,NFK,NF
+165,Nigeria,Nigeria,Нигерия,NGA,NG
+166,Nicaragua,Nicaragua,Никарагуа,NIC,NI
+167,Netherlands,Țările de Jos,Нидерланды,NLD,NL
+168,Norway,Norvegia,Норвегия,NOR,NO
+169,Nepal,Nepal,Непал,NPL,NP
+170,Nauru,Nauru,Науру,NRU,NR
+171,Niue,Niue,Ниуе,NIU,NU
+172,New Zealand,Noua Zeelandă,Новая Зеландия,NZL,NZ
+173,Oman,Oman,Оман,OMN,OM
+174,Panama,Panama,Панама,PAN,PA
+175,Peru,Peru,Перу,PER,PE
+176,French Polynesia,Polinezia Franceză,Французская Полинезия,PYF,PF
+177,Papua New Guinea,Papua-Noua Guinee,Папуа — Новая Гвинея,PNG,PG
+178,Philippines,Filipine,Филиппины,PHL,PH
+179,Pakistan,Pakistan,Пакистан,PAK,PK
+180,Poland,Polonia,Польша,POL,PL
+181,Saint Pierre and Miquelon,Saint-Pierre și Miquelon,Сен-Пьер и Микелон,SPM,PM
+182,Pitcairn Islands,Insulele Pitcairn,о-ва Питкэрн,PCN,PN
+183,Puerto Rico,Puerto Rico,Пуэрто-Рико,PRI,PR
+184,Palestine,Palestina,Палестина,PSE,PS
+185,Portugal,Portugalia,Португалия,PRT,PT
+186,Palau,Palau,Палау,PLW,PW
+187,Paraguay,Paraguay,Парагвай,PRY,PY
+188,Qatar,Qatar,Катар,QAT,QA
+189,Reunion,Réunion,Реюньон,REU,RE
+190,Romania,România,Румыния,ROU,RO
+191,Serbia,Serbia,Сербия,SRB,RS
+192,Russia,Federația Rusă,Россия,RUS,RU
+193,Rwanda,Rwanda,Руанда,RWA,RW
+194,Saudi Arabia,Arabia Saudită,Саудовская Аравия,SAU,SA
+195,Solomon Islands,Insulele Solomon,Соломонские острова,SLB,SB
+196,Seychelles,Seychelles,Сейшельские Острова,SYC,SC
+197,Sudan,Sudan,Судан,SDN,SD
+198,South Sudan,Sudanul de Sud,Южный Судан,SSD,SS
+199,Sweden,Suedia,Швеция,SWE,SE
+200,Singapore,Singapore,Сингапур,SGP,SG
+201,St. Helena,Sfânta Elena,о-в Св. Елены,SHN,SH
+202,Slovenia,Slovenia,Словения,SVN,SI
+203,Svalbard and Jan Mayen,Svalbard și Jan Mayen,Шпицберген и Ян-Майен,SJM,SJ
+204,Slovakia,Slovacia,Словакия,SVK,SK
+205,Sierra Leone,Sierra Leone,Сьерра-Леоне,SLE,SL
+206,San Marino,San Marino,Сан-Марино,SMR,SM
+207,Senegal,Senegal,Сенегал,SEN,SN
+208,Somalia,Somalia,Сомали,SOM,SO
+209,Suriname,Suriname,Суринам,SUR,SR
+210,Sao Tome and Principe,São Tomé și Príncipe,Сан-Томе и Принсипе,STP,ST
+211,El Salvador,El Salvador,Сальвадор,SLV,SV
+212,Sint Maarten,Sint-Maarten,Синт-Мартен,SXM,SX
+213,Syria,Siria,Сирия,SYR,SY
+214,Eswatini,Eswatini,Эсватини,SWZ,SZ
+215,Turks and Caicos Islands,Insulele Turks și Caicos,о-ва Тёркс и Кайкос,TCA,TC
+216,Chad,Ciad,Чад,TCD,TD
+217,French Southern Territories,Teritoriile Australe și Antarctice Franceze,Французские Южные территории,ATF,TF
+218,Togo,Togo,Того,TGO,TG
+219,Thailand,Thailanda,Тайланд,THA,TH
+220,Tajikistan,Tajikistan,Таджикистан,TJK,TJ
+221,Tokelau,Tokelau,Токелау,TKL,TK
+222,Timor-Leste,Timor-Leste,Тимор-Лесте,TLS,TL
+223,Turkmenistan,Turkmenia,Туркменистан,TKM,TM
+224,Tunisia,Tunisia,Тунис,TUN,TN
+225,Tonga,Tonga,Тонга,TON,TO
+226,Turkey,Turcia,Турция,TUR,TR
+227,Trinidad and Tobago,Trinidad și Tobago,Тринидад и Тобаго,TTO,TT
+228,Tuvalu,Tuvalu,Тувалу,TUV,TV
+229,Taiwan,Taiwan,Тайвань,TWN,TW
+230,Tanzania,Tanzania,Танзания,TZA,TZ
+231,Ukraine,Ucraina,Украина,UKR,UA
+232,Uganda,Uganda,Уганда,UGA,UG
+233,United States Minor Outlying Islands,Insulele Îndepărtate ale S.U.A.,Внешние малые о-ва (США),UMI,UM
+234,United States of America,S.U.A.,США,USA,US
+235,Uruguay,Uruguay,Уругвай,URY,UY
+236,Uzbekistan,Uzbekistan,Узбекистан,UZB,UZ
+237,Vatican City,Orașul Vatican,Ватикан,VAT,VA
+238,Saint Vincent and the Grenadines,Sfântul Vincențiu și Grenadine,Сент-Винсент и Гренадины,VCT,VC
+239,Venezuela,Venezuela,Венесуэла,VEN,VE
+240,British Virgin Islands,Insulele Virgine Britanice,Виргинские о-ва (Великобритания),VGB,VG
+241,U.S. Virgin Islands,Insulele Virgine Americane,Виргинские о-ва (США),VIR,VI
+242,Vietnam,Vietnam,Вьетнам,VNM,VN
+243,Vanuatu,Vanuatu,Вануату,VUT,VU
+244,Wallis and Futuna,Wallis și Futuna,Уоллис и Футуна,WLF,WF
+245,Samoa,Samoa,Самоа,WSM,WS
+246,Yemen,Yemen,Йемен,YEM,YE
+247,Mayotte,Mayotte,Майотта,MYT,YT
+248,South Africa,Africa de Sud,Южно-Африканская Республика,ZAF,ZA
+249,Zambia,Zambia,Замбия,ZMB,ZM
+250,Zimbabwe,Zimbabwe,Зимбабве,ZWE,ZW

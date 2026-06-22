@@ -2,8 +2,10 @@ package main
 
 import (
 	"avmd-search-engine-go/internal/config"
+	dbstore "avmd-search-engine-go/internal/db"
 	"avmd-search-engine-go/internal/httpserver"
 	"avmd-search-engine-go/internal/logging"
+	"context"
 	"fmt"
 	"net/http"
 )
@@ -15,6 +17,9 @@ func main() {
 	}
 
 	logger := logging.NewLogger(cfg)
+	if err := dbstore.RunMigrations(context.Background(), cfg, logger); err != nil {
+		panic(err)
+	}
 	server := httpserver.NewHttpServer(cfg, logger)
 	server.InitHandlers()
 
