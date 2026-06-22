@@ -35,6 +35,7 @@ func (s *HttpServer) SearchFlights(
 	}
 
 	return api.SearchFlights200JSONResponse{
+		SearchId:  serviceResp.SearchID,
 		RoutingId: serviceResp.RoutingID,
 		Offers:    mapOffers(serviceResp.Offers),
 	}, nil

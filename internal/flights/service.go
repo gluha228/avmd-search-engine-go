@@ -20,17 +20,31 @@ type TravelfusionClient interface {
 	Search(ctx context.Context, req travelfusion.SearchRequest) (*travelfusion.SearchResult, error)
 }
 
+type SessionStore interface {
+	Create(ctx context.Context, session FlightSearchSession) (string, error)
+}
+
 type Service struct {
-	tfClient TravelfusionClient
-	logger   *slog.Logger
-	now      func() time.Time
+	tfClient     TravelfusionClient
+	sessionStore SessionStore
+	logger       *slog.Logger
+	now          func() time.Time
 }
 
 func NewService(tfClient TravelfusionClient, logger *slog.Logger) *Service {
+	return NewServiceWithSessionStore(tfClient, nil, logger)
+}
+
+func NewServiceWithSessionStore(
+	tfClient TravelfusionClient,
+	sessionStore SessionStore,
+	logger *slog.Logger,
+) *Service {
 	return &Service{
-		tfClient: tfClient,
-		logger:   logger,
-		now:      time.Now,
+		tfClient:     tfClient,
+		sessionStore: sessionStore,
+		logger:       logger,
+		now:          time.Now,
 	}
 }
 
@@ -65,7 +79,20 @@ func (s *Service) Search(ctx context.Context, req SearchRequest) (*SearchRespons
 		s.logger.Debug("flight search mapped", "routing_id", tfResult.RoutingID, "offers", len(offers))
 	}
 
+	var searchID string
+	if s.sessionStore != nil {
+		searchID, err = s.sessionStore.Create(ctx, FlightSearchSession{
+			Params:      req,
+			TFRoutingID: tfResult.RoutingID,
+			TFOffers:    offers,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("create flight search session: %w", err)
+		}
+	}
+
 	return &SearchResponse{
+		SearchID:  searchID,
 		RoutingID: tfResult.RoutingID,
 		Offers:    offers,
 	}, nil

@@ -5,14 +5,17 @@ import (
 	"avmd-search-engine-go/api/gen"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/flights"
+	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/travelfusion"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 type HttpServer struct {
@@ -39,7 +42,17 @@ func (s *HttpServer) InitHandlers() {
 		PollingAttempts:     s.cfg.TFPollingAttempts,
 		PollingDelaySeconds: s.cfg.TFPollingDelaySeconds,
 	}, s.logger)
-	s.flightService = flights.NewService(tfClient, s.logger)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     s.cfg.RedisAddr,
+		Password: s.cfg.RedisPassword,
+		DB:       s.cfg.RedisDB,
+	})
+	sessionStore := flightsession.NewRedisStore(
+		redisClient,
+		time.Duration(s.cfg.RedisSessionTTLHours)*time.Hour,
+		s.logger,
+	)
+	s.flightService = flights.NewServiceWithSessionStore(tfClient, sessionStore, s.logger)
 }
 
 func (s *HttpServer) CreateHandler() http.Handler {

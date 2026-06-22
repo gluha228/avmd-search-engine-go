@@ -11,6 +11,7 @@ type SearchRequest struct {
 }
 
 type SearchResponse struct {
+	SearchID  string
 	RoutingID string
 	Offers    []Offer
 }
@@ -40,4 +41,10 @@ type Segment struct {
 	DurationMinutes      int
 	FlightNumber         string
 	TravelClass          string
+}
+
+type FlightSearchSession struct {
+	Params      SearchRequest `json:"params"`
+	TFRoutingID string        `json:"tf_routing_id"`
+	TFOffers    []Offer       `json:"tf_offers"`
 }

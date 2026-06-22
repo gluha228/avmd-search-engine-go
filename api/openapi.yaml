@@ -94,8 +94,10 @@ components:
   schemas:
     FlightSearchResponse:
       type: object
-      required: [routing_id, offers]
+      required: [search_id, routing_id, offers]
       properties:
+        search_id:
+          type: string
         routing_id:
           type: string
         offers:

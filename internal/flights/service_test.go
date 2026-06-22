@@ -13,8 +13,19 @@ type fakeTFClient struct {
 	err    error
 }
 
+type fakeSessionStore struct {
+	searchID string
+	session  FlightSearchSession
+	err      error
+}
+
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
+}
+
+func (f *fakeSessionStore) Create(_ context.Context, session FlightSearchSession) (string, error) {
+	f.session = session
+	return f.searchID, f.err
 }
 
 func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
@@ -45,6 +56,32 @@ func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
 	}
 	if resp.Offers[0].OfferID != "OUT1" || resp.Offers[0].Price != 100 {
 		t.Fatalf("unexpected offer: %+v", resp.Offers[0])
+	}
+}
+
+func TestSearchCreatesFlightSearchSession(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1"}
+	service := NewServiceWithSessionStore(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID:      "RID",
+		OutwardFlights: []travelfusion.Flight{tfFlight("OUT1", "KIV", "OTP", departure, 100)},
+	}}, store, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	resp, err := service.Search(context.Background(), SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if resp.SearchID != "search-1" {
+		t.Fatalf("expected search id from session store, got %q", resp.SearchID)
+	}
+	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
+		t.Fatalf("unexpected stored session: %+v", store.session)
 	}
 }
 

@@ -35,6 +35,7 @@ type Flight struct {
 type FlightSearchResponse struct {
 	Offers    []Offer `json:"offers"`
 	RoutingId string  `json:"routing_id"`
+	SearchId  string  `json:"search_id"`
 }
 
 // FlightSegment defines model for FlightSegment.

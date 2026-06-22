@@ -7,6 +7,10 @@ type Config struct {
 	LoggingLevel          string `env:"LOG_LEVEL" envDefault:"INFO"`
 	LoggingAddSource      bool   `env:"LOG_ADD_SOURCE" envDefault:"false"`
 	UseJsonLogs           bool   `env:"LOG_USE_JSON" envDefault:"false"`
+	RedisAddr             string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
+	RedisPassword         string `env:"REDIS_PASSWORD"`
+	RedisDB               int    `env:"REDIS_DB" envDefault:"0"`
+	RedisSessionTTLHours  int    `env:"REDIS_SESSION_TTL_HOURS" envDefault:"24"`
 	TFBaseURL             string `env:"TF_BASE_URL" envDefault:"http://api.travelfusion.com"`
 	TFXmlLoginID          string `env:"TF_XML_LOGIN_ID"`
 	TFLoginID             string `env:"TF_LOGIN_ID"`

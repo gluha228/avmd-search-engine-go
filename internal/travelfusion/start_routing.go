@@ -1,0 +1,106 @@
+package travelfusion
+
+import (
+	"encoding/xml"
+	"time"
+)
+
+type commandListStartRouting struct {
+	XMLName      xml.Name            `xml:"CommandList"`
+	StartRouting startRoutingCommand `xml:"StartRouting"`
+}
+
+type startRoutingCommand struct {
+	XmlLoginID         string        `xml:"XmlLoginId"`
+	LoginID            string        `xml:"LoginId"`
+	Mode               string        `xml:"Mode"`
+	Origin             location      `xml:"Origin"`
+	Destination        location      `xml:"Destination"`
+	OutwardDates       routingDates  `xml:"OutwardDates"`
+	ReturnDates        *routingDates `xml:"ReturnDates,omitempty"`
+	MaxChanges         int           `xml:"MaxChanges"`
+	MaxHops            int           `xml:"MaxHops"`
+	Timeout            int           `xml:"Timeout"`
+	TravellerList      travellerList `xml:"TravellerList"`
+	IncrementalResults bool          `xml:"IncrementalResults"`
+}
+
+type location struct {
+	Descriptor string `xml:"Descriptor"`
+	Type       string `xml:"Type"`
+	Radius     int    `xml:"Radius"`
+}
+
+type routingDates struct {
+	DateOfSearch     string           `xml:"DateOfSearch"`
+	DepartDateFilter departDateFilter `xml:"DepartDateFilter"`
+}
+
+type departDateFilter struct {
+	DiscardBefore string `xml:"DiscardBefore"`
+	DiscardAfter  string `xml:"DiscardAfter"`
+}
+
+type travellerList struct {
+	Travellers []traveller `xml:"Traveller"`
+}
+
+type traveller struct {
+	Age int `xml:"Age"`
+}
+
+type commandListStartRoutingResponse struct {
+	StartRouting startRoutingResponse `xml:"StartRouting"`
+}
+
+type startRoutingResponse struct {
+	RoutingID  string   `xml:"RoutingId"`
+	RouterList []router `xml:"RouterList>Router"`
+}
+
+func buildStartRoutingXML(xmlLoginID, loginID string, timeoutSeconds int, req SearchRequest) ([]byte, error) {
+	travellers := make([]traveller, req.AdultCount)
+	for i := range travellers {
+		travellers[i] = traveller{Age: 30}
+	}
+
+	cmd := commandListStartRouting{
+		StartRouting: startRoutingCommand{
+			XmlLoginID: xmlLoginID,
+			LoginID:    loginID,
+			Mode:       "plane",
+			Origin: location{
+				Descriptor: req.DepartureAirportCode,
+				Type:       "airportcode",
+				Radius:     0,
+			},
+			Destination: location{
+				Descriptor: req.ArrivalAirportCode,
+				Type:       "airportcode",
+				Radius:     0,
+			},
+			OutwardDates:       buildRoutingDates(req.DepartureDate),
+			MaxChanges:         10,
+			MaxHops:            11,
+			Timeout:            timeoutSeconds,
+			TravellerList:      travellerList{Travellers: travellers},
+			IncrementalResults: true,
+		},
+	}
+	if req.ReturnDate != nil {
+		returnDates := buildRoutingDates(*req.ReturnDate)
+		cmd.StartRouting.ReturnDates = &returnDates
+	}
+
+	return xml.Marshal(cmd)
+}
+
+func buildRoutingDates(date time.Time) routingDates {
+	return routingDates{
+		DateOfSearch: formatTFTime(date),
+		DepartDateFilter: departDateFilter{
+			DiscardBefore: formatTFTime(date.AddDate(0, 0, -3)),
+			DiscardAfter:  formatTFTime(date.AddDate(0, 0, 4)),
+		},
+	}
+}
