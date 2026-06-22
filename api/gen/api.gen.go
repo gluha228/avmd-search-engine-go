@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
@@ -20,43 +20,6 @@ import (
 // Error defines model for Error.
 type Error struct {
 	Message string `json:"message"`
-}
-
-// Flight defines model for Flight.
-type Flight struct {
-	ArrivalAirportCode   string          `json:"arrival_airport_code"`
-	DepartureAirportCode string          `json:"departure_airport_code"`
-	Price                float64         `json:"price"`
-	SeatsAvailable       int32           `json:"seats_available"`
-	Segments             []FlightSegment `json:"segments"`
-}
-
-// FlightSearchResponse defines model for FlightSearchResponse.
-type FlightSearchResponse struct {
-	Offers    []Offer `json:"offers"`
-	RoutingId string  `json:"routing_id"`
-	SearchId  string  `json:"search_id"`
-}
-
-// FlightSegment defines model for FlightSegment.
-type FlightSegment struct {
-	ArrivalAirportCode   string     `json:"arrival_airport_code"`
-	ArrivalTime          *time.Time `json:"arrival_time,omitempty"`
-	DepartureAirportCode string     `json:"departure_airport_code"`
-	DepartureTime        *time.Time `json:"departure_time,omitempty"`
-	DurationMinutes      *int32     `json:"duration_minutes,omitempty"`
-	FlightNumber         *string    `json:"flight_number,omitempty"`
-	SegmentId            int32      `json:"segment_id"`
-	TravelClass          *string    `json:"travel_class,omitempty"`
-}
-
-// Offer defines model for Offer.
-type Offer struct {
-	CurrencyCode   string  `json:"currency_code"`
-	InboundFlight  *Flight `json:"inbound_flight,omitempty"`
-	OfferId        string  `json:"offer_id"`
-	OutboundFlight Flight  `json:"outbound_flight"`
-	Price          float64 `json:"price"`
 }
 
 // AdultCountParam defines model for AdultCountParam.
@@ -321,18 +284,47 @@ type SearchFlightsResponseObject interface {
 	VisitSearchFlightsResponse(w http.ResponseWriter) error
 }
 
-type SearchFlights200JSONResponse FlightSearchResponse
+type SearchFlights200TexteventStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
 
-func (response SearchFlights200JSONResponse) VisitSearchFlightsResponse(w http.ResponseWriter) error {
+func (response SearchFlights200TexteventStreamResponse) VisitSearchFlightsResponse(w http.ResponseWriter) error {
 
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+	w.Header().Set("Content-Type", "text/event-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		// If w doesn't support flushing, fall back to io.Copy.
+		_, err := io.Copy(w, response.Body)
 		return err
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
+	// text/event-stream messages are typically small; use a
+	// modest buffer and flush after each chunk so clients see
+	// events immediately instead of waiting on OS buffering.
+	buf := make([]byte, 4096)
+	for {
+		n, err := response.Body.Read(buf)
+		if n > 0 {
+			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+			flusher.Flush()
+		}
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
 }
 
 type SearchFlights400JSONResponse Error

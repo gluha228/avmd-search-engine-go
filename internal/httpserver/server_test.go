@@ -2,13 +2,42 @@ package httpserver
 
 import (
 	"avmd-search-engine-go/internal/config"
+	"avmd-search-engine-go/internal/flights"
+	"avmd-search-engine-go/internal/travelfusion"
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+type fakeTFClient struct {
+	result *travelfusion.SearchResult
+	err    error
+}
+
+func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
+	return f.result, f.err
+}
+
+type fakeSessionStore struct {
+	searchID string
+	session  flights.FlightSearchSession
+	err      error
+}
+
+func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearchSession) (string, error) {
+	f.session = session
+	return f.searchID, f.err
+}
+
+func (f *fakeSessionStore) Save(_ context.Context, _ string, session flights.FlightSearchSession) error {
+	f.session = session
+	return f.err
+}
 
 func TestOpenAPISpecEndpoint(t *testing.T) {
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -85,5 +114,62 @@ func TestSwaggerUIRedirect(t *testing.T) {
 	}
 	if location := recorder.Header().Get("Location"); location != "/swagger-ui/index.html" {
 		t.Fatalf("expected redirect to /swagger-ui/index.html, got %q", location)
+	}
+}
+
+func TestSearchFlightsStreamsSSE(t *testing.T) {
+	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+	segmentArrival := departure.Add(90 * time.Minute)
+	store := &fakeSessionStore{searchID: "search-1"}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID: "RID",
+		OutwardFlights: []travelfusion.Flight{
+			{
+				ID:            "OUT1",
+				Origin:        "KIV",
+				Destination:   "OTP",
+				DepartureTime: departure,
+				ArrivalTime:   segmentArrival,
+				Price:         100,
+				Currency:      "EUR",
+				Segments: []travelfusion.Segment{
+					{
+						Origin:          "KIV",
+						Destination:     "OTP",
+						DepartureTime:   departure,
+						ArrivalTime:     segmentArrival,
+						DurationMinutes: 90,
+						FlightNumber:    "TF100",
+						TravelClass:     "Economy",
+					},
+				},
+			},
+		},
+	}}, store, nil)
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/flights/search?departureAirportCode=KIV&arrivalAirportCode=OTP&departureDate=2026-07-02&adultCount=1",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if contentType := recorder.Header().Get("Content-Type"); !strings.Contains(contentType, "text/event-stream") {
+		t.Fatalf("expected SSE content type, got %q", contentType)
+	}
+	body := recorder.Body.String()
+	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"OUT1"`, "event: done\ndata: \n\n"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected SSE body to contain %q, got %q", expected, body)
+		}
+	}
+	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
+		t.Fatalf("expected final session to be saved, got %+v", store.session)
 	}
 }

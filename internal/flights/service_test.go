@@ -28,6 +28,11 @@ func (f *fakeSessionStore) Create(_ context.Context, session FlightSearchSession
 	return f.searchID, f.err
 }
 
+func (f *fakeSessionStore) Save(_ context.Context, _ string, session FlightSearchSession) error {
+	f.session = session
+	return f.err
+}
+
 func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
 	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	service := NewService(fakeTFClient{result: &travelfusion.SearchResult{

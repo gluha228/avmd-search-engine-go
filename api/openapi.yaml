@@ -23,11 +23,20 @@ paths:
         - $ref: "#/components/parameters/AdultCountParam"
       responses:
         "200":
-          description: OK
+          description: Server-sent events stream. Emits `search_id`, `offers`, and `done` events.
           content:
-            application/json:
+            text/event-stream:
               schema:
-                $ref: "#/components/schemas/FlightSearchResponse"
+                type: string
+              example: |
+                event: search_id
+                data: {"search_id":"..."}
+
+                event: offers
+                data: {"offers":[]}
+
+                event: done
+                data: {"search_id":"..."}
         "400":
           description: Validation failed
           content:

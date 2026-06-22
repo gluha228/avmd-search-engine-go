@@ -22,6 +22,7 @@ type TravelfusionClient interface {
 
 type SessionStore interface {
 	Create(ctx context.Context, session FlightSearchSession) (string, error)
+	Save(ctx context.Context, searchID string, session FlightSearchSession) error
 }
 
 type Service struct {
@@ -49,7 +50,31 @@ func NewServiceWithSessionStore(
 }
 
 func (s *Service) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
-	if err := s.validate(req); err != nil {
+	searchID, err := s.CreateSession(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.SearchIntoSession(ctx, searchID, req, nil)
+}
+
+func (s *Service) CreateSession(ctx context.Context, req SearchRequest) (string, error) {
+	if err := s.Validate(req); err != nil {
+		return "", err
+	}
+	if s.sessionStore == nil {
+		return "", nil
+	}
+	return s.sessionStore.Create(ctx, FlightSearchSession{Params: req})
+}
+
+func (s *Service) SearchIntoSession(
+	ctx context.Context,
+	searchID string,
+	req SearchRequest,
+	onOffers func([]Offer) error,
+) (*SearchResponse, error) {
+	if err := s.Validate(req); err != nil {
 		return nil, err
 	}
 
@@ -74,20 +99,24 @@ func (s *Service) Search(ctx context.Context, req SearchRequest) (*SearchRespons
 	sort.Slice(offers, func(i, j int) bool {
 		return offers[i].Price < offers[j].Price
 	})
+	if len(offers) > 0 && onOffers != nil {
+		if err := onOffers(offers); err != nil {
+			return nil, err
+		}
+	}
 
 	if s.logger != nil {
 		s.logger.Debug("flight search mapped", "routing_id", tfResult.RoutingID, "offers", len(offers))
 	}
 
-	var searchID string
-	if s.sessionStore != nil {
-		searchID, err = s.sessionStore.Create(ctx, FlightSearchSession{
+	if s.sessionStore != nil && searchID != "" {
+		err = s.sessionStore.Save(ctx, searchID, FlightSearchSession{
 			Params:      req,
 			TFRoutingID: tfResult.RoutingID,
 			TFOffers:    offers,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("create flight search session: %w", err)
+			return nil, fmt.Errorf("update flight search session: %w", err)
 		}
 	}
 
@@ -98,7 +127,7 @@ func (s *Service) Search(ctx context.Context, req SearchRequest) (*SearchRespons
 	}, nil
 }
 
-func (s *Service) validate(req SearchRequest) error {
+func (s *Service) Validate(req SearchRequest) error {
 	if !iataCodePattern.MatchString(req.DepartureAirportCode) {
 		return fmt.Errorf("%w: departureAirportCode must be a 3-letter IATA code", ErrInvalidRequest)
 	}
