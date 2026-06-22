@@ -30,6 +30,27 @@ type Currency struct {
 	USDRate float64
 }
 
+type ProcessDetailsRequest struct {
+	RoutingID string
+	OutwardID string
+	ReturnID  string
+}
+
+type ProcessDetailsResult struct {
+	RoutingID          string
+	RequiredParameters []RequiredParameter
+}
+
+type RequiredParameter struct {
+	Name                string
+	Value               string
+	Type                string
+	DisplayText         string
+	PerPassenger        *bool
+	IsOptional          *bool
+	IsSometimesRequired bool
+}
+
 type Flight struct {
 	ID                 string
 	Origin             string

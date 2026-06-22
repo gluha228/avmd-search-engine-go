@@ -92,6 +92,64 @@ func TestBuildGetCurrenciesXML(t *testing.T) {
 	}
 }
 
+func TestBuildProcessDetailsXML(t *testing.T) {
+	payload, err := buildProcessDetailsXML("xml-login", "login", ProcessDetailsRequest{
+		RoutingID: "RID",
+		OutwardID: "OUT1",
+		ReturnID:  "RET1",
+	})
+	if err != nil {
+		t.Fatalf("buildProcessDetailsXML returned error: %v", err)
+	}
+
+	xmlBody := string(payload)
+	for _, part := range []string{
+		"<ProcessDetails>",
+		"<XmlLoginId>xml-login</XmlLoginId>",
+		"<LoginId>login</LoginId>",
+		"<RoutingId>RID</RoutingId>",
+		"<OutwardId>OUT1</OutwardId>",
+		"<ReturnId>RET1</ReturnId>",
+	} {
+		if !strings.Contains(xmlBody, part) {
+			t.Fatalf("expected XML to contain %q, got %s", part, xmlBody)
+		}
+	}
+}
+
+func TestMapProcessDetailsRequiredParameters(t *testing.T) {
+	body := []byte(`<CommandList>
+  <ProcessDetails>
+    <RoutingId>RID</RoutingId>
+    <Router>
+      <RequiredParameterList>
+        <RequiredParameter>
+          <Name>PassportNumber</Name>
+          <Type>text</Type>
+          <DisplayText>Passport number</DisplayText>
+          <PerPassenger>true</PerPassenger>
+          <IsOptional>false</IsOptional>
+          <IsSometimesRequired/>
+        </RequiredParameter>
+      </RequiredParameterList>
+    </Router>
+  </ProcessDetails>
+</CommandList>`)
+
+	var resp commandListProcessDetailsResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	result := mapProcessDetails(resp.ProcessDetails)
+	if result.RoutingID != "RID" || len(result.RequiredParameters) != 1 {
+		t.Fatalf("unexpected process details result: %+v", result)
+	}
+	param := result.RequiredParameters[0]
+	if param.Name != "PassportNumber" || param.Type != "TEXT" || param.PerPassenger == nil || !*param.PerPassenger || !param.IsSometimesRequired {
+		t.Fatalf("unexpected required parameter: %+v", param)
+	}
+}
+
 func TestMapCurrencies(t *testing.T) {
 	body := []byte(`<CommandList>
   <GetCurrencies>

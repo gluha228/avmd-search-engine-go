@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
@@ -36,6 +37,29 @@ func (e LocaleHeaderParam) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AdditionalField defines model for AdditionalField.
+type AdditionalField struct {
+	Code         string                  `json:"code"`
+	Description  *string                 `json:"description,omitempty"`
+	InputType    string                  `json:"input_type"`
+	Options      []AdditionalFieldOption `json:"options"`
+	PerPassenger bool                    `json:"per_passenger"`
+	Required     bool                    `json:"required"`
+}
+
+// AdditionalFieldOption defines model for AdditionalFieldOption.
+type AdditionalFieldOption struct {
+	Label *string                     `json:"label,omitempty"`
+	Price *AdditionalFieldOptionPrice `json:"price,omitempty"`
+	Value *string                     `json:"value,omitempty"`
+}
+
+// AdditionalFieldOptionPrice defines model for AdditionalFieldOptionPrice.
+type AdditionalFieldOptionPrice struct {
+	Amount       float64 `json:"amount"`
+	CurrencyCode string  `json:"currency_code"`
 }
 
 // Airport defines model for Airport.
@@ -117,11 +141,77 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// Flight defines model for Flight.
+type Flight struct {
+	ArrivalAirportCode   string          `json:"arrival_airport_code"`
+	DepartureAirportCode string          `json:"departure_airport_code"`
+	Price                float64         `json:"price"`
+	SeatsAvailable       int32           `json:"seats_available"`
+	Segments             []FlightSegment `json:"segments"`
+}
+
 // FlightDay defines model for FlightDay.
 type FlightDay struct {
 	CurrencyCode string             `json:"currency_code"`
 	Date         openapi_types.Date `json:"date"`
 	Price        float64            `json:"price"`
+}
+
+// FlightSearchParams defines model for FlightSearchParams.
+type FlightSearchParams struct {
+	AdultCount                          int32               `json:"adult_count"`
+	ArrivalAirportCode                  string              `json:"arrival_airport_code"`
+	ArrivalInboundFrom                  *string             `json:"arrival_inbound_from,omitempty"`
+	ArrivalInboundTo                    *string             `json:"arrival_inbound_to,omitempty"`
+	ArrivalOutboundFrom                 *string             `json:"arrival_outbound_from,omitempty"`
+	ArrivalOutboundTo                   *string             `json:"arrival_outbound_to,omitempty"`
+	ChildCount                          *int32              `json:"child_count,omitempty"`
+	DepartureAirportCode                string              `json:"departure_airport_code"`
+	DepartureDate                       openapi_types.Date  `json:"departure_date"`
+	DepartureInboundFrom                *string             `json:"departure_inbound_from,omitempty"`
+	DepartureInboundTo                  *string             `json:"departure_inbound_to,omitempty"`
+	DepartureOutboundFrom               *string             `json:"departure_outbound_from,omitempty"`
+	DepartureOutboundTo                 *string             `json:"departure_outbound_to,omitempty"`
+	InfantCount                         *int32              `json:"infant_count,omitempty"`
+	MaxIndividualSegmentDurationMinutes *int32              `json:"max_individual_segment_duration_minutes,omitempty"`
+	MaxLayoverMinutes                   *int32              `json:"max_layover_minutes,omitempty"`
+	MaxPrice                            *float64            `json:"max_price,omitempty"`
+	MaxSegments                         *int32              `json:"max_segments,omitempty"`
+	MaxTotalDurationMinutes             *int32              `json:"max_total_duration_minutes,omitempty"`
+	MinIndividualSegmentDurationMinutes *int32              `json:"min_individual_segment_duration_minutes,omitempty"`
+	MinLayoverMinutes                   *int32              `json:"min_layover_minutes,omitempty"`
+	MinPrice                            *float64            `json:"min_price,omitempty"`
+	MinSegments                         *int32              `json:"min_segments,omitempty"`
+	MinTotalDurationMinutes             *int32              `json:"min_total_duration_minutes,omitempty"`
+	ReturnDate                          *openapi_types.Date `json:"return_date,omitempty"`
+}
+
+// FlightSegment defines model for FlightSegment.
+type FlightSegment struct {
+	ArrivalAirportCode   string     `json:"arrival_airport_code"`
+	ArrivalTime          *time.Time `json:"arrival_time,omitempty"`
+	DepartureAirportCode string     `json:"departure_airport_code"`
+	DepartureTime        *time.Time `json:"departure_time,omitempty"`
+	DurationMinutes      *int32     `json:"duration_minutes,omitempty"`
+	FlightNumber         *string    `json:"flight_number,omitempty"`
+	SegmentId            int32      `json:"segment_id"`
+	TravelClass          *string    `json:"travel_class,omitempty"`
+}
+
+// Offer defines model for Offer.
+type Offer struct {
+	CurrencyCode   string  `json:"currency_code"`
+	InboundFlight  *Flight `json:"inbound_flight,omitempty"`
+	OfferId        string  `json:"offer_id"`
+	OutboundFlight Flight  `json:"outbound_flight"`
+	Price          float64 `json:"price"`
+}
+
+// SelectedOffer defines model for SelectedOffer.
+type SelectedOffer struct {
+	AdditionalFields []AdditionalField  `json:"additional_fields"`
+	Offer            Offer              `json:"offer"`
+	SearchParams     FlightSearchParams `json:"search_params"`
 }
 
 // AdultCountParam defines model for AdultCountParam.
@@ -211,11 +301,17 @@ type MinSegmentsParam = int32
 // MinTotalDurationMinutesParam defines model for MinTotalDurationMinutesParam.
 type MinTotalDurationMinutesParam = int32
 
+// OfferIDParam defines model for OfferIDParam.
+type OfferIDParam = string
+
 // OriginAirportCodeParam defines model for OriginAirportCodeParam.
 type OriginAirportCodeParam = string
 
 // ReturnDateParam defines model for ReturnDateParam.
 type ReturnDateParam = openapi_types.Date
+
+// SearchIDParam defines model for SearchIDParam.
+type SearchIDParam = string
 
 // SearchParam defines model for SearchParam.
 type SearchParam = string
@@ -255,6 +351,15 @@ type GetAirportParams struct {
 
 // UpdateAirportParams defines parameters for UpdateAirport.
 type UpdateAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// GetSelectedOfferParams defines parameters for GetSelectedOffer.
+type GetSelectedOfferParams struct {
+	SearchId SearchIDParam `form:"searchId" json:"searchId"`
+	OfferId  OfferIDParam  `form:"offerId" json:"offerId"`
+
 	// AcceptLanguage Language preference (en, ro, ru)
 	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
@@ -408,6 +513,9 @@ type ServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams)
 
+	// (GET /api/v1/booking/selected-offer)
+	GetSelectedOffer(w http.ResponseWriter, r *http.Request, params GetSelectedOfferParams)
+
 	// (GET /api/v1/cities)
 	ListCities(w http.ResponseWriter, r *http.Request, params ListCitiesParams)
 
@@ -474,6 +582,11 @@ func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDP
 
 // (PUT /api/v1/airports/{id})
 func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/booking/selected-offer)
+func (_ Unimplemented) GetSelectedOffer(w http.ResponseWriter, r *http.Request, params GetSelectedOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -774,6 +887,73 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAirport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSelectedOffer operation middleware
+func (siw *ServerInterfaceWrapper) GetSelectedOffer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSelectedOfferParams
+
+	// ------------- Required query parameter "searchId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "searchId", r.URL.Query(), &params.SearchId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "searchId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "searchId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "offerId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "offerId", r.URL.Query(), &params.OfferId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offerId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offerId", Err: err})
+		}
+		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSelectedOffer(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1915,6 +2095,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/api/v1/airports/{id}", wrapper.UpdateAirport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/booking/selected-offer", wrapper.GetSelectedOffer)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/cities", wrapper.ListCities)
 	})
 	r.Group(func(r chi.Router) {
@@ -2159,6 +2342,70 @@ func (response UpdateAirport404JSONResponse) VisitUpdateAirportResponse(w http.R
 type UpdateAirport500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelectedOfferRequestObject struct {
+	Params GetSelectedOfferParams
+}
+
+type GetSelectedOfferResponseObject interface {
+	VisitGetSelectedOfferResponse(w http.ResponseWriter) error
+}
+
+type GetSelectedOffer200JSONResponse SelectedOffer
+
+func (response GetSelectedOffer200JSONResponse) VisitGetSelectedOfferResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelectedOffer400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetSelectedOffer400JSONResponse) VisitGetSelectedOfferResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelectedOffer404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSelectedOffer404JSONResponse) VisitGetSelectedOfferResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSelectedOffer500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSelectedOffer500JSONResponse) VisitGetSelectedOfferResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2781,6 +3028,9 @@ type StrictServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(ctx context.Context, request UpdateAirportRequestObject) (UpdateAirportResponseObject, error)
 
+	// (GET /api/v1/booking/selected-offer)
+	GetSelectedOffer(ctx context.Context, request GetSelectedOfferRequestObject) (GetSelectedOfferResponseObject, error)
+
 	// (GET /api/v1/cities)
 	ListCities(ctx context.Context, request ListCitiesRequestObject) (ListCitiesResponseObject, error)
 
@@ -2990,6 +3240,32 @@ func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAirportResponseObject); ok {
 		if err := validResponse.VisitUpdateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSelectedOffer operation middleware
+func (sh *strictHandler) GetSelectedOffer(w http.ResponseWriter, r *http.Request, params GetSelectedOfferParams) {
+	var request GetSelectedOfferRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSelectedOffer(ctx, request.(GetSelectedOfferRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSelectedOffer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSelectedOfferResponseObject); ok {
+		if err := validResponse.VisitGetSelectedOfferResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

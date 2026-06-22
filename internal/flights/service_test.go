@@ -9,8 +9,9 @@ import (
 )
 
 type fakeTFClient struct {
-	result *travelfusion.SearchResult
-	err    error
+	result         *travelfusion.SearchResult
+	processDetails *travelfusion.ProcessDetailsResult
+	err            error
 }
 
 type fakeSessionStore struct {
@@ -23,6 +24,22 @@ type fakeCalendarCache struct {
 	calls []calendarCacheCall
 }
 
+type fakeCurrencyConverter struct {
+	from    string
+	to      string
+	amount  float64
+	result  float64
+	results []float64
+	calls   []currencyConversionCall
+	err     error
+}
+
+type currencyConversionCall struct {
+	amount float64
+	from   string
+	to     string
+}
+
 type calendarCacheCall struct {
 	departure string
 	arrival   string
@@ -31,6 +48,10 @@ type calendarCacheCall struct {
 
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
+}
+
+func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
+	return f.processDetails, f.err
 }
 
 func (f *fakeSessionStore) Create(_ context.Context, session FlightSearchSession) (string, error) {
@@ -43,9 +64,35 @@ func (f *fakeSessionStore) Save(_ context.Context, _ string, session FlightSearc
 	return f.err
 }
 
+func (f *fakeSessionStore) Get(_ context.Context, _ string) (*FlightSearchSession, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &f.session, nil
+}
+
 func (f *fakeCalendarCache) CacheFlights(_ context.Context, departure, arrival string, flights []travelfusion.Flight) error {
 	f.calls = append(f.calls, calendarCacheCall{departure: departure, arrival: arrival, flights: flights})
 	return nil
+}
+
+func (f *fakeCurrencyConverter) Convert(_ context.Context, amount float64, from, to string) (float64, error) {
+	f.amount = amount
+	f.from = from
+	f.to = to
+	f.calls = append(f.calls, currencyConversionCall{amount: amount, from: from, to: to})
+	if f.err != nil {
+		return 0, f.err
+	}
+	if len(f.results) > 0 {
+		result := f.results[0]
+		f.results = f.results[1:]
+		return result, nil
+	}
+	if f.result != 0 {
+		return f.result, nil
+	}
+	return amount, nil
 }
 
 func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
@@ -74,7 +121,7 @@ func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
 	if len(resp.Offers) != 1 {
 		t.Fatalf("expected 1 offer, got %d", len(resp.Offers))
 	}
-	if resp.Offers[0].OfferID != "OUT1" || resp.Offers[0].Price != 100 {
+	if resp.Offers[0].OfferID != "TF-OUT1" || resp.Offers[0].Price != 100 {
 		t.Fatalf("unexpected offer: %+v", resp.Offers[0])
 	}
 }
@@ -102,6 +149,162 @@ func TestSearchCreatesFlightSearchSession(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("unexpected stored session: %+v", store.session)
+	}
+}
+
+func TestGetSelectedOfferFetchesProcessDetailsAndCachesRequiredParameters(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1", session: FlightSearchSession{
+		Params: SearchRequest{
+			DepartureAirportCode: "KIV",
+			ArrivalAirportCode:   "OTP",
+			DepartureDate:        departure,
+			AdultCount:           1,
+		},
+		TFRoutingID: "RID",
+		TFOffers: []Offer{
+			{OfferID: "TF-OUT1", CurrencyCode: "EUR", Price: 100},
+		},
+	}}
+	required := false
+	perPassenger := true
+	service := NewServiceWithSessionStore(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+		RoutingID: "RID",
+		RequiredParameters: []travelfusion.RequiredParameter{
+			{
+				Name:         "PassportNumber",
+				Type:         "TEXT",
+				DisplayText:  "Passport number",
+				PerPassenger: &perPassenger,
+				IsOptional:   &required,
+			},
+		},
+	}}, store, nil)
+
+	selected, err := service.GetSelectedOffer(context.Background(), "search-1", "TF-OUT1")
+	if err != nil {
+		t.Fatalf("GetSelectedOffer returned error: %v", err)
+	}
+	if selected.Offer.OfferID != "TF-OUT1" {
+		t.Fatalf("unexpected selected offer: %+v", selected.Offer)
+	}
+	if len(selected.AdditionalFields) != 1 || selected.AdditionalFields[0].Code != "PASSPORT_NUMBER" {
+		t.Fatalf("expected passport additional field, got %+v", selected.AdditionalFields)
+	}
+	if store.session.SelectedOfferID != "TF-OUT1" || len(store.session.TFRequiredParameters) != 1 {
+		t.Fatalf("expected selected offer data cached in session, got %+v", store.session)
+	}
+}
+
+func TestGetSelectedOfferConvertsOfferToDefaultCurrency(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	inbound := Flight{Price: 50}
+	store := &fakeSessionStore{searchID: "search-1", session: FlightSearchSession{
+		Params:      SearchRequest{DepartureAirportCode: "KIV", ArrivalAirportCode: "OTP", DepartureDate: departure, AdultCount: 1},
+		TFRoutingID: "RID",
+		TFOffers: []Offer{
+			{
+				OfferID:        "TF-OUT1-RET1",
+				CurrencyCode:   "USD",
+				Price:          150,
+				OutboundFlight: Flight{Price: 100},
+				InboundFlight:  &inbound,
+			},
+		},
+	}}
+	converter := &fakeCurrencyConverter{results: []float64{90, 45}}
+	service := NewServiceWithBookingDependencies(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+		RoutingID: "RID",
+	}}, store, nil, converter, "EUR", nil)
+
+	selected, err := service.GetSelectedOffer(context.Background(), "search-1", "TF-OUT1-RET1")
+	if err != nil {
+		t.Fatalf("GetSelectedOffer returned error: %v", err)
+	}
+	if selected.Offer.CurrencyCode != "EUR" || selected.Offer.Price != 135 {
+		t.Fatalf("expected selected offer converted to EUR, got %+v", selected.Offer)
+	}
+	if selected.Offer.OutboundFlight.Price != 90 || selected.Offer.InboundFlight == nil || selected.Offer.InboundFlight.Price != 45 {
+		t.Fatalf("expected converted leg prices, got %+v", selected.Offer)
+	}
+	if len(converter.calls) != 2 || converter.calls[0].from != "USD" || converter.calls[0].to != "EUR" {
+		t.Fatalf("unexpected conversion calls: %+v", converter.calls)
+	}
+}
+
+func TestParseLuggageInnerExtractsTrailingPriceCurrency(t *testing.T) {
+	parsed, ok := parseLuggageInner("1 bags - 20Kg total - 25.00 EUR")
+	if !ok {
+		t.Fatal("expected luggage option to parse")
+	}
+	if parsed.Quantity != 1 || parsed.Price != 25 || parsed.CurrencyCode != "EUR" {
+		t.Fatalf("unexpected parsed luggage option: %+v", parsed)
+	}
+	if len(parsed.WeightPartsKG) != 1 || parsed.WeightPartsKG[0] != "20" {
+		t.Fatalf("unexpected weight parts: %+v", parsed.WeightPartsKG)
+	}
+}
+
+func TestParseLuggageInnerDoesNotTreatBagAsCurrency(t *testing.T) {
+	if _, ok := parseLuggageInner("1 BAG 20 KG"); ok {
+		t.Fatal("expected luggage option without trailing price/currency not to parse")
+	}
+}
+
+func TestMapAdditionalFieldConvertsLuggagePriceCurrency(t *testing.T) {
+	converter := &fakeCurrencyConverter{result: 30}
+	service := NewServiceWithBookingDependencies(fakeTFClient{}, nil, nil, converter, "EUR", nil)
+
+	field, ok := service.mapAdditionalField(WithLocale(context.Background(), "en"), TFRequiredParameterSnapshot{
+		Parameter:   "LUGGAGE_OPTIONS",
+		Type:        "VALUE_SELECT",
+		DisplayText: "LuggageOptions: 1 (1 bags - 20Kg total - 25.00 EUR)",
+	})
+	if !ok {
+		t.Fatal("expected luggage additional field")
+	}
+	if converter.from != "EUR" || converter.to != "EUR" || converter.amount != 25 {
+		t.Fatalf("unexpected conversion call: %+v", converter)
+	}
+	if len(field.Options) != 1 || field.Options[0].Price == nil {
+		t.Fatalf("expected luggage price option, got %+v", field.Options)
+	}
+	if field.Options[0].Label != "1 bags - 20 kg" || field.Options[0].Price.Amount != 30 {
+		t.Fatalf("unexpected luggage option: %+v", field.Options[0])
+	}
+}
+
+func TestFormatLuggageDescriptorLocalizesLikeJava(t *testing.T) {
+	parsed := parsedLuggageOption{
+		Quantity:      2,
+		WeightPartsKG: []string{"15", "20"},
+	}
+	tests := map[string]string{
+		"en": "2 bags - 15 kg + 20 kg",
+		"ro": "2 bagaje - 15 kg + 20 kg",
+		"ru": "2 багажа - 15 кг + 20 кг",
+	}
+	for locale, expected := range tests {
+		if got := formatLuggageDescriptor(locale, parsed); got != expected {
+			t.Fatalf("expected %q for locale %s, got %q", expected, locale, got)
+		}
+	}
+}
+
+func TestFormatLuggageDescriptorUsesSingularLabels(t *testing.T) {
+	parsed := parsedLuggageOption{
+		Quantity:      1,
+		WeightPartsKG: []string{"20"},
+	}
+	tests := map[string]string{
+		"en": "1 bags - 20 kg",
+		"ro": "1 bagaj - 20 kg",
+		"ru": "1 багаж - 20 кг",
+	}
+	for locale, expected := range tests {
+		if got := formatLuggageDescriptor(locale, parsed); got != expected {
+			t.Fatalf("expected %q for locale %s, got %q", expected, locale, got)
+		}
 	}
 }
 
@@ -187,7 +390,7 @@ func TestSearchAppliesJavaSearchFilters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Search returned error: %v", err)
 	}
-	if len(resp.Offers) != 1 || resp.Offers[0].OfferID != "OUT1" {
+	if len(resp.Offers) != 1 || resp.Offers[0].OfferID != "TF-OUT1" {
 		t.Fatalf("expected only matching filtered offer, got %+v", resp.Offers)
 	}
 }
@@ -296,7 +499,7 @@ func TestSearchRoundTripBuildsCheapestPair(t *testing.T) {
 	if len(resp.Offers) != 2 {
 		t.Fatalf("expected 2 offers, got %d: %+v", len(resp.Offers), resp.Offers)
 	}
-	if resp.Offers[0].OfferID != "OUT2_RET2" || resp.Offers[0].Price != 150 {
+	if resp.Offers[0].OfferID != "TF-OUT2-RET2" || resp.Offers[0].Price != 150 {
 		t.Fatalf("expected cheapest pair first, got %+v", resp.Offers[0])
 	}
 }

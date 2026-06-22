@@ -36,6 +36,32 @@ type SearchResponse struct {
 	Offers    []Offer
 }
 
+type SelectedOffer struct {
+	Offer            Offer
+	SearchParams     SearchRequest
+	AdditionalFields []AdditionalField
+}
+
+type AdditionalField struct {
+	Code         string
+	Description  string
+	InputType    string
+	Required     bool
+	PerPassenger bool
+	Options      []AdditionalFieldOption
+}
+
+type AdditionalFieldOption struct {
+	Value string
+	Label string
+	Price *AdditionalFieldOptionPrice
+}
+
+type AdditionalFieldOptionPrice struct {
+	Amount       float64
+	CurrencyCode string
+}
+
 type Offer struct {
 	OfferID        string
 	OutboundFlight Flight
@@ -64,7 +90,19 @@ type Segment struct {
 }
 
 type FlightSearchSession struct {
-	Params      SearchRequest `json:"params"`
-	TFRoutingID string        `json:"tf_routing_id"`
-	TFOffers    []Offer       `json:"tf_offers"`
+	Params               SearchRequest                 `json:"params"`
+	TFRoutingID          string                        `json:"tf_routing_id"`
+	TFOffers             []Offer                       `json:"tf_offers"`
+	SelectedOfferID      string                        `json:"selected_offer_id,omitempty"`
+	TFRequiredParameters []TFRequiredParameterSnapshot `json:"tf_required_parameters,omitempty"`
+}
+
+type TFRequiredParameterSnapshot struct {
+	Parameter           string `json:"parameter"`
+	Value               string `json:"value,omitempty"`
+	Type                string `json:"type,omitempty"`
+	PerPassenger        *bool  `json:"per_passenger,omitempty"`
+	IsOptional          *bool  `json:"is_optional,omitempty"`
+	IsSometimesRequired bool   `json:"is_sometimes_required"`
+	DisplayText         string `json:"display_text,omitempty"`
 }

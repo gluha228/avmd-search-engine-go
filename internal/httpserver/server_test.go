@@ -6,6 +6,7 @@ import (
 	"avmd-search-engine-go/internal/flights"
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,12 +17,17 @@ import (
 )
 
 type fakeTFClient struct {
-	result *travelfusion.SearchResult
-	err    error
+	result         *travelfusion.SearchResult
+	processDetails *travelfusion.ProcessDetailsResult
+	err            error
 }
 
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
+}
+
+func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
+	return f.processDetails, f.err
 }
 
 type fakeSessionStore struct {
@@ -42,6 +48,13 @@ func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearc
 func (f *fakeSessionStore) Save(_ context.Context, _ string, session flights.FlightSearchSession) error {
 	f.session = session
 	return f.err
+}
+
+func (f *fakeSessionStore) Get(_ context.Context, _ string) (*flights.FlightSearchSession, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &f.session, nil
 }
 
 func (f *fakeCalendarPriceStore) GetMinPrice(_ context.Context, origin, destination string, date time.Time) (*calendar.PriceEntry, error) {
@@ -182,13 +195,141 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 		t.Fatalf("expected SSE content type, got %q", contentType)
 	}
 	body := recorder.Body.String()
-	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"OUT1"`, "event: done\ndata: \n\n"} {
+	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, "event: done\ndata: \n\n"} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected SSE body to contain %q, got %q", expected, body)
 		}
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
+	}
+}
+
+func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
+	departure := time.Date(2026, 7, 2, 8, 30, 0, 0, time.UTC)
+	arrival := departure.Add(90 * time.Minute)
+	store := &fakeSessionStore{session: flights.FlightSearchSession{
+		Params: flights.SearchRequest{
+			DepartureAirportCode: "KIV",
+			ArrivalAirportCode:   "OTP",
+			DepartureDate:        departure,
+			AdultCount:           1,
+		},
+		TFRoutingID: "RID",
+		TFOffers: []flights.Offer{
+			{
+				OfferID:      "TF-OUT1",
+				CurrencyCode: "EUR",
+				Price:        100,
+				OutboundFlight: flights.Flight{
+					DepartureAirportCode: "KIV",
+					ArrivalAirportCode:   "OTP",
+					SeatsAvailable:       4,
+					Price:                100,
+					Segments: []flights.Segment{
+						{
+							SegmentID:            1,
+							DepartureAirportCode: "KIV",
+							ArrivalAirportCode:   "OTP",
+							DepartureTime:        &departure,
+							ArrivalTime:          &arrival,
+							DurationMinutes:      90,
+							FlightNumber:         "TF100",
+							TravelClass:          "Economy",
+						},
+					},
+				},
+			},
+		},
+	}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	isOptional := false
+	perPassenger := true
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+		RoutingID: "RID",
+		RequiredParameters: []travelfusion.RequiredParameter{
+			{
+				Name:         "PassportNumber",
+				Type:         "text",
+				DisplayText:  "Passport number",
+				IsOptional:   &isOptional,
+				PerPassenger: &perPassenger,
+			},
+		},
+	}}, store, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/selected-offer?searchId=search-1&offerId=TF-OUT1", nil)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	offer := response["offer"].(map[string]any)
+	searchParams := response["search_params"].(map[string]any)
+	if offer["offer_id"] != "TF-OUT1" || offer["price"] != float64(100) {
+		t.Fatalf("unexpected offer response: %s", recorder.Body.String())
+	}
+	if searchParams["departure_airport_code"] != "KIV" || searchParams["adult_count"] != float64(1) {
+		t.Fatalf("unexpected search params response: %s", recorder.Body.String())
+	}
+	if _, ok := response["available_ancillaries"]; ok {
+		t.Fatalf("expected available_ancillaries to be omitted, got %s", recorder.Body.String())
+	}
+	additionalFields, ok := response["additional_fields"].([]any)
+	if !ok || len(additionalFields) != 1 {
+		t.Fatalf("expected additional_fields array, got %s", recorder.Body.String())
+	}
+	field := additionalFields[0].(map[string]any)
+	if field["code"] != "PASSPORT_NUMBER" || field["input_type"] != "TEXT" {
+		t.Fatalf("unexpected additional_fields response: %s", recorder.Body.String())
+	}
+}
+
+func TestGetSelectedOfferLocalizesLuggageAdditionalFields(t *testing.T) {
+	departure := time.Date(2026, 7, 2, 8, 30, 0, 0, time.UTC)
+	store := &fakeSessionStore{session: flights.FlightSearchSession{
+		Params: flights.SearchRequest{
+			DepartureAirportCode: "KIV",
+			ArrivalAirportCode:   "OTP",
+			DepartureDate:        departure,
+			AdultCount:           1,
+		},
+		TFRoutingID: "RID",
+		TFOffers: []flights.Offer{
+			{OfferID: "TF-OUT1", CurrencyCode: "EUR", Price: 100},
+		},
+	}}
+	isOptional := false
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+		RoutingID: "RID",
+		RequiredParameters: []travelfusion.RequiredParameter{
+			{
+				Name:        "LuggageOptions",
+				Type:        "value_select",
+				DisplayText: "LuggageOptions: 1 (1 bags - 20Kg total - 25.00 EUR)",
+				IsOptional:  &isOptional,
+			},
+		},
+	}}, store, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/selected-offer?searchId=search-1&offerId=TF-OUT1", nil)
+	request.Header.Set("Accept-Language", "ru")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"label":"1 багаж - 20 кг"`) {
+		t.Fatalf("expected localized luggage label, got %s", recorder.Body.String())
 	}
 }
 

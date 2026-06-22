@@ -8,33 +8,43 @@ import (
 	"log/slog"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
 var (
 	ErrInvalidRequest = errors.New("invalid flight search request")
+	ErrNotFound       = errors.New("flight resource not found")
 	iataCodePattern   = regexp.MustCompile(`^[A-Z]{3}$`)
 )
 
 type TravelfusionClient interface {
 	Search(ctx context.Context, req travelfusion.SearchRequest) (*travelfusion.SearchResult, error)
+	ProcessDetails(ctx context.Context, req travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error)
 }
 
 type SessionStore interface {
 	Create(ctx context.Context, session FlightSearchSession) (string, error)
 	Save(ctx context.Context, searchID string, session FlightSearchSession) error
+	Get(ctx context.Context, searchID string) (*FlightSearchSession, error)
 }
 
 type CalendarCache interface {
 	CacheFlights(ctx context.Context, departure, arrival string, flights []travelfusion.Flight) error
 }
 
+type CurrencyConverter interface {
+	Convert(ctx context.Context, amount float64, from, to string) (float64, error)
+}
+
 type Service struct {
-	tfClient     TravelfusionClient
-	sessionStore SessionStore
-	calendar     CalendarCache
-	logger       *slog.Logger
-	now          func() time.Time
+	tfClient        TravelfusionClient
+	sessionStore    SessionStore
+	calendar        CalendarCache
+	currency        CurrencyConverter
+	defaultCurrency string
+	logger          *slog.Logger
+	now             func() time.Time
 }
 
 func NewService(tfClient TravelfusionClient, logger *slog.Logger) *Service {
@@ -55,12 +65,25 @@ func NewServiceWithDependencies(
 	calendarCache CalendarCache,
 	logger *slog.Logger,
 ) *Service {
+	return NewServiceWithBookingDependencies(tfClient, sessionStore, calendarCache, nil, "", logger)
+}
+
+func NewServiceWithBookingDependencies(
+	tfClient TravelfusionClient,
+	sessionStore SessionStore,
+	calendarCache CalendarCache,
+	currencyConverter CurrencyConverter,
+	defaultCurrency string,
+	logger *slog.Logger,
+) *Service {
 	return &Service{
-		tfClient:     tfClient,
-		sessionStore: sessionStore,
-		calendar:     calendarCache,
-		logger:       logger,
-		now:          time.Now,
+		tfClient:        tfClient,
+		sessionStore:    sessionStore,
+		calendar:        calendarCache,
+		currency:        currencyConverter,
+		defaultCurrency: strings.ToUpper(strings.TrimSpace(defaultCurrency)),
+		logger:          logger,
+		now:             time.Now,
 	}
 }
 
@@ -151,6 +174,69 @@ func (s *Service) SearchIntoSession(
 		SearchID:  searchID,
 		RoutingID: tfResult.RoutingID,
 		Offers:    offers,
+	}, nil
+}
+
+func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string) (*SelectedOffer, error) {
+	if s.sessionStore == nil {
+		return nil, fmt.Errorf("%w: session store is not configured", ErrNotFound)
+	}
+	searchID = strings.TrimSpace(searchID)
+	offerID = strings.TrimSpace(offerID)
+	if searchID == "" {
+		return nil, fmt.Errorf("%w: searchId is required", ErrInvalidRequest)
+	}
+	if offerID == "" {
+		return nil, fmt.Errorf("%w: offerId is required", ErrInvalidRequest)
+	}
+
+	session, err := s.sessionStore.Get(ctx, searchID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: search session expired or not found for ID: %s", ErrNotFound, searchID)
+	}
+	if len(session.TFOffers) == 0 {
+		return nil, fmt.Errorf("%w: no TravelFusion offers in session: %s", ErrNotFound, searchID)
+	}
+
+	offer, ok := findOffer(session.TFOffers, offerID)
+	if !ok {
+		return nil, fmt.Errorf("%w: offer with ID %s not found in TravelFusion session", ErrNotFound, offerID)
+	}
+	ids, ok := parseTFOfferID(offerID)
+	if !ok {
+		return nil, fmt.Errorf("%w: cannot parse TravelFusion outward/return ids from offerId=%s", ErrInvalidRequest, offerID)
+	}
+	if strings.TrimSpace(session.TFRoutingID) == "" {
+		return nil, fmt.Errorf("TravelFusion routing id is missing for ancillary enrichment (offerId=%s)", offerID)
+	}
+
+	details, err := s.tfClient.ProcessDetails(ctx, travelfusion.ProcessDetailsRequest{
+		RoutingID: session.TFRoutingID,
+		OutwardID: ids.outwardID,
+		ReturnID:  ids.returnID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("TravelFusion ProcessDetails failed during ancillary enrichment (offerId=%s): %w", offerID, err)
+	}
+	if details == nil {
+		return nil, fmt.Errorf("TravelFusion ProcessDetails returned empty response (offerId=%s)", offerID)
+	}
+
+	required := normalizeRequiredParameters(details.RequiredParameters)
+	session.SelectedOfferID = offerID
+	session.TFRequiredParameters = required
+	if err := s.sessionStore.Save(ctx, searchID, *session); err != nil {
+		return nil, fmt.Errorf("update selected offer session: %w", err)
+	}
+
+	offer, err = s.convertOfferToDefaultCurrency(ctx, offer)
+	if err != nil {
+		return nil, err
+	}
+	return &SelectedOffer{
+		Offer:            offer,
+		SearchParams:     session.Params,
+		AdditionalFields: s.mapAdditionalFields(ctx, required),
 	}, nil
 }
 
@@ -477,9 +563,9 @@ func containsOffer(offers []Offer, offerID string) bool {
 
 func offerID(outward travelfusion.Flight, inbound *travelfusion.Flight) string {
 	if inbound == nil {
-		return outward.ID
+		return tfOfferIDPrefix + outward.ID
 	}
-	return outward.ID + "_" + inbound.ID
+	return tfOfferIDPrefix + outward.ID + "-" + inbound.ID
 }
 
 func sameCalendarDate(a, b time.Time) bool {

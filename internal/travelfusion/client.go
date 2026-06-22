@@ -127,6 +127,27 @@ func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error)
 	return mapCurrencies(resp.GetCurrencies), nil
 }
 
+func (c *Client) ProcessDetails(ctx context.Context, req ProcessDetailsRequest) (*ProcessDetailsResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	payload, err := buildProcessDetailsXML(c.xmlLoginID, c.loginID, req)
+	if err != nil {
+		return nil, fmt.Errorf("build process details request: %w", err)
+	}
+	body, err := c.postXML(ctx, "ProcessDetails", payload)
+	if err != nil {
+		return nil, fmt.Errorf("process details: %w", err)
+	}
+
+	var resp commandListProcessDetailsResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parse process details response: %w", err)
+	}
+	return mapProcessDetails(resp.ProcessDetails), nil
+}
+
 func (c *Client) GetBranchSupplierList(ctx context.Context) ([]string, error) {
 	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
 		return nil, ErrMissingCredentials

@@ -100,7 +100,14 @@ func (s *HttpServer) InitHandlers() {
 		s.geoService = geo.NewServiceWithRouteProvider(geo.NewSQLCRepository(db), s.routeService)
 	}
 	s.calendarService = calendar.NewService(priceStore, s.cfg.DefaultCurrencyCode, s.currencyService, s.logger)
-	s.flightService = flights.NewServiceWithDependencies(tfClient, sessionStore, s.calendarService, s.logger)
+	s.flightService = flights.NewServiceWithBookingDependencies(
+		tfClient,
+		sessionStore,
+		s.calendarService,
+		s.currencyService,
+		s.cfg.DefaultCurrencyCode,
+		s.logger,
+	)
 }
 
 func (s *HttpServer) CreateHandler() http.Handler {

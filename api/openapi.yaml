@@ -1,7 +1,7 @@
 openapi: 3.0.0
 
 info:
-  title: AVMD Search Engine API
+  title: AVMD Search Engine API (Golang edition)
   version: 1.0.0
 
 servers:
@@ -10,8 +10,31 @@ servers:
 tags:
   - name: Flights
   - name: Geo
+  - name: Booking
 
 paths:
+  /api/v1/booking/selected-offer:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
+    get:
+      tags: [Booking]
+      operationId: getSelectedOffer
+      parameters:
+        - $ref: "#/components/parameters/SearchIDParam"
+        - $ref: "#/components/parameters/OfferIDParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SelectedOffer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /api/v1/countries:
     parameters:
       - $ref: "#/components/parameters/LocaleHeaderParam"
@@ -414,6 +437,20 @@ components:
         type: string
         enum: [en, ro, ru]
         default: en
+    SearchIDParam:
+      name: searchId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    OfferIDParam:
+      name: offerId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
     IDParam:
       name: id
       in: path
@@ -665,6 +702,123 @@ components:
         type: string
         pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
   schemas:
+    SelectedOffer:
+      type: object
+      required: [offer, search_params, additional_fields]
+      properties:
+        offer:
+          $ref: "#/components/schemas/Offer"
+        search_params:
+          $ref: "#/components/schemas/FlightSearchParams"
+        additional_fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdditionalField"
+    FlightSearchParams:
+      type: object
+      required: [departure_airport_code, arrival_airport_code, departure_date, adult_count]
+      properties:
+        departure_airport_code:
+          type: string
+        arrival_airport_code:
+          type: string
+        departure_date:
+          type: string
+          format: date
+        return_date:
+          type: string
+          format: date
+        adult_count:
+          type: integer
+          format: int32
+        child_count:
+          type: integer
+          format: int32
+        infant_count:
+          type: integer
+          format: int32
+        min_price:
+          type: number
+          format: double
+        max_price:
+          type: number
+          format: double
+        min_segments:
+          type: integer
+          format: int32
+        max_segments:
+          type: integer
+          format: int32
+        min_total_duration_minutes:
+          type: integer
+          format: int32
+        max_total_duration_minutes:
+          type: integer
+          format: int32
+        min_individual_segment_duration_minutes:
+          type: integer
+          format: int32
+        max_individual_segment_duration_minutes:
+          type: integer
+          format: int32
+        min_layover_minutes:
+          type: integer
+          format: int32
+        max_layover_minutes:
+          type: integer
+          format: int32
+        departure_outbound_from:
+          type: string
+        departure_outbound_to:
+          type: string
+        arrival_outbound_from:
+          type: string
+        arrival_outbound_to:
+          type: string
+        departure_inbound_from:
+          type: string
+        departure_inbound_to:
+          type: string
+        arrival_inbound_from:
+          type: string
+        arrival_inbound_to:
+          type: string
+    AdditionalField:
+      type: object
+      required: [code, input_type, required, per_passenger, options]
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        input_type:
+          type: string
+        required:
+          type: boolean
+        per_passenger:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdditionalFieldOption"
+    AdditionalFieldOption:
+      type: object
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        price:
+          $ref: "#/components/schemas/AdditionalFieldOptionPrice"
+    AdditionalFieldOptionPrice:
+      type: object
+      required: [amount, currency_code]
+      properties:
+        amount:
+          type: number
+          format: double
+        currency_code:
+          type: string
     CountryRequest:
       type: object
       required: [name_ro, name_ru, name_en, iso3, iso2]
