@@ -90,6 +90,81 @@ func TestSearchCreatesFlightSearchSession(t *testing.T) {
 	}
 }
 
+func TestSearchAppliesJavaSearchFilters(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC)
+	matching := tfFlight("OUT1", "KIV", "OTP", departure, 150)
+	matching.Segments = []travelfusion.Segment{
+		{
+			Origin:          "KIV",
+			Destination:     "VIE",
+			DepartureTime:   departure,
+			ArrivalTime:     departure.Add(90 * time.Minute),
+			DurationMinutes: 90,
+			FlightNumber:    "TF100",
+			TravelClass:     "Economy",
+		},
+		{
+			Origin:          "VIE",
+			Destination:     "OTP",
+			DepartureTime:   departure.Add(150 * time.Minute),
+			ArrivalTime:     departure.Add(240 * time.Minute),
+			DurationMinutes: 90,
+			FlightNumber:    "TF200",
+			TravelClass:     "Economy",
+		},
+	}
+	tooExpensive := tfFlight("OUT2", "KIV", "OTP", departure, 500)
+	service := NewService(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID:      "RID",
+		OutwardFlights: []travelfusion.Flight{matching, tooExpensive},
+	}}, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	resp, err := service.Search(context.Background(), SearchRequest{
+		DepartureAirportCode:                "KIV",
+		ArrivalAirportCode:                  "OTP",
+		DepartureDate:                       time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		AdultCount:                          1,
+		MinPrice:                            float64Ptr(100),
+		MaxPrice:                            float64Ptr(200),
+		MinSegments:                         intTestPtr(2),
+		MaxSegments:                         intTestPtr(2),
+		MinTotalDurationMinutes:             intTestPtr(240),
+		MaxTotalDurationMinutes:             intTestPtr(240),
+		MinIndividualSegmentDurationMinutes: intTestPtr(60),
+		MaxIndividualSegmentDurationMinutes: intTestPtr(100),
+		MinLayoverMinutes:                   intTestPtr(60),
+		MaxLayoverMinutes:                   intTestPtr(60),
+		DepartureOutboundFrom:               clockPtr("07:00"),
+		DepartureOutboundTo:                 clockPtr("09:00"),
+		ArrivalOutboundFrom:                 clockPtr("11:00"),
+		ArrivalOutboundTo:                   clockPtr("13:00"),
+	})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(resp.Offers) != 1 || resp.Offers[0].OfferID != "OUT1" {
+		t.Fatalf("expected only matching filtered offer, got %+v", resp.Offers)
+	}
+}
+
+func TestSearchValidatesFilterRanges(t *testing.T) {
+	service := NewService(fakeTFClient{err: errors.New("should not be called")}, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	_, err := service.Search(context.Background(), SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		AdultCount:           1,
+		MinPrice:             float64Ptr(200),
+		MaxPrice:             float64Ptr(100),
+	})
+	if !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected ErrInvalidRequest, got %v", err)
+	}
+}
+
 func TestSearchKeepsFlightWhenAnySegmentMatchesDepartureDate(t *testing.T) {
 	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
 	firstSegmentDeparture := time.Date(2026, 7, 1, 21, 30, 0, 0, time.UTC)
@@ -219,4 +294,20 @@ func tfFlight(id, origin, destination string, departure time.Time, price float64
 			},
 		},
 	}
+}
+
+func intTestPtr(value int) *int {
+	return &value
+}
+
+func float64Ptr(value float64) *float64 {
+	return &value
+}
+
+func clockPtr(value string) *time.Time {
+	parsed, err := time.Parse("15:04", value)
+	if err != nil {
+		panic(err)
+	}
+	return &parsed
 }

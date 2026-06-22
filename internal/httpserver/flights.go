@@ -19,15 +19,9 @@ func (s *HttpServer) SearchFlights(
 		return api.SearchFlights400JSONResponse{Message: err.Error()}, nil
 	}
 
-	serviceReq := flights.SearchRequest{
-		DepartureAirportCode: request.Params.DepartureAirportCode,
-		ArrivalAirportCode:   request.Params.ArrivalAirportCode,
-		DepartureDate:        request.Params.DepartureDate.Time,
-		AdultCount:           int(request.Params.AdultCount),
-	}
-	if request.Params.ReturnDate != nil {
-		returnDate := request.Params.ReturnDate.Time
-		serviceReq.ReturnDate = &returnDate
+	serviceReq, err := mapSearchRequest(request.Params)
+	if err != nil {
+		return api.SearchFlights400JSONResponse{Message: err.Error()}, nil
 	}
 
 	if err := s.flightService.Validate(serviceReq); errors.Is(err, flights.ErrInvalidRequest) {
@@ -41,6 +35,91 @@ func (s *HttpServer) SearchFlights(
 		service: s.flightService,
 		request: serviceReq,
 	}, nil
+}
+
+func mapSearchRequest(params api.SearchFlightsParams) (flights.SearchRequest, error) {
+	req := flights.SearchRequest{
+		DepartureAirportCode:                params.DepartureAirportCode,
+		ArrivalAirportCode:                  params.ArrivalAirportCode,
+		DepartureDate:                       params.DepartureDate.Time,
+		AdultCount:                          int(params.AdultCount),
+		ChildCount:                          intValue(params.ChildCount),
+		InfantCount:                         intValue(params.InfantCount),
+		MinPrice:                            floatPtr(params.MinPrice),
+		MaxPrice:                            floatPtr(params.MaxPrice),
+		MinSegments:                         intPtrFromParam(params.MinSegments),
+		MaxSegments:                         intPtrFromParam(params.MaxSegments),
+		MinTotalDurationMinutes:             intPtrFromParam(params.MinTotalDurationMinutes),
+		MaxTotalDurationMinutes:             intPtrFromParam(params.MaxTotalDurationMinutes),
+		MinIndividualSegmentDurationMinutes: intPtrFromParam(params.MinIndividualSegmentDurationMinutes),
+		MaxIndividualSegmentDurationMinutes: intPtrFromParam(params.MaxIndividualSegmentDurationMinutes),
+		MinLayoverMinutes:                   intPtrFromParam(params.MinLayoverMinutes),
+		MaxLayoverMinutes:                   intPtrFromParam(params.MaxLayoverMinutes),
+	}
+	if params.ReturnDate != nil {
+		returnDate := params.ReturnDate.Time
+		req.ReturnDate = &returnDate
+	}
+
+	var err error
+	if req.DepartureOutboundFrom, err = parseOptionalClock(params.DepartureOutboundFrom); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("departureOutboundFrom: %w", err)
+	}
+	if req.DepartureOutboundTo, err = parseOptionalClock(params.DepartureOutboundTo); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("departureOutboundTo: %w", err)
+	}
+	if req.ArrivalOutboundFrom, err = parseOptionalClock(params.ArrivalOutboundFrom); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("arrivalOutboundFrom: %w", err)
+	}
+	if req.ArrivalOutboundTo, err = parseOptionalClock(params.ArrivalOutboundTo); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("arrivalOutboundTo: %w", err)
+	}
+	if req.DepartureInboundFrom, err = parseOptionalClock(params.DepartureInboundFrom); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("departureInboundFrom: %w", err)
+	}
+	if req.DepartureInboundTo, err = parseOptionalClock(params.DepartureInboundTo); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("departureInboundTo: %w", err)
+	}
+	if req.ArrivalInboundFrom, err = parseOptionalClock(params.ArrivalInboundFrom); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("arrivalInboundFrom: %w", err)
+	}
+	if req.ArrivalInboundTo, err = parseOptionalClock(params.ArrivalInboundTo); err != nil {
+		return flights.SearchRequest{}, fmt.Errorf("arrivalInboundTo: %w", err)
+	}
+	return req, nil
+}
+
+func parseOptionalClock[T ~string](value *T) (*time.Time, error) {
+	if value == nil {
+		return nil, nil
+	}
+	parsed, err := time.Parse("15:04", string(*value))
+	if err != nil {
+		return nil, fmt.Errorf("must use HH:mm format")
+	}
+	return &parsed, nil
+}
+
+func intValue(value *int32) int {
+	if value == nil {
+		return 0
+	}
+	return int(*value)
+}
+
+func intPtrFromParam(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	converted := int(*value)
+	return &converted
+}
+
+func floatPtr(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	return value
 }
 
 type searchFlightsSSEResponse struct {

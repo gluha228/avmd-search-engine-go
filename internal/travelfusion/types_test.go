@@ -51,6 +51,29 @@ func TestBuildStartRoutingXML(t *testing.T) {
 	}
 }
 
+func TestBuildStartRoutingXMLAddsChildrenAndInfants(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	payload, err := buildStartRoutingXML("xml-login", "login", 60, SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "LON",
+		DepartureDate:        departure,
+		AdultCount:           1,
+		ChildCount:           1,
+		InfantCount:          1,
+	})
+	if err != nil {
+		t.Fatalf("buildStartRoutingXML returned error: %v", err)
+	}
+
+	xmlBody := string(payload)
+	for _, part := range []string{"<Age>30</Age>", "<Age>7</Age>", "<Age>0</Age>"} {
+		if !strings.Contains(xmlBody, part) {
+			t.Fatalf("expected XML to contain %q, got %s", part, xmlBody)
+		}
+	}
+}
+
 func TestExtractFlights(t *testing.T) {
 	body := []byte(`<CommandList>
   <CheckRouting>

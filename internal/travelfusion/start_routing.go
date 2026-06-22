@@ -59,10 +59,7 @@ type startRoutingResponse struct {
 }
 
 func buildStartRoutingXML(xmlLoginID, loginID string, timeoutSeconds int, req SearchRequest) ([]byte, error) {
-	travellers := make([]traveller, req.AdultCount)
-	for i := range travellers {
-		travellers[i] = traveller{Age: 30}
-	}
+	travellers := buildTravellers(req)
 
 	cmd := commandListStartRouting{
 		StartRouting: startRoutingCommand{
@@ -93,6 +90,21 @@ func buildStartRoutingXML(xmlLoginID, loginID string, timeoutSeconds int, req Se
 	}
 
 	return xml.Marshal(cmd)
+}
+
+func buildTravellers(req SearchRequest) []traveller {
+	travellers := make([]traveller, 0, req.AdultCount+req.ChildCount+req.InfantCount)
+	travellers = appendTravellers(travellers, req.AdultCount, 30)
+	travellers = appendTravellers(travellers, req.ChildCount, 7)
+	travellers = appendTravellers(travellers, req.InfantCount, 0)
+	return travellers
+}
+
+func appendTravellers(travellers []traveller, count int, age int) []traveller {
+	for range count {
+		travellers = append(travellers, traveller{Age: age})
+	}
+	return travellers
 }
 
 func buildRoutingDates(date time.Time) routingDates {

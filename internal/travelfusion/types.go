@@ -14,6 +14,8 @@ type SearchRequest struct {
 	DepartureDate        time.Time
 	ReturnDate           *time.Time
 	AdultCount           int
+	ChildCount           int
+	InfantCount          int
 }
 
 type SearchResult struct {

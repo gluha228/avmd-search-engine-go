@@ -21,6 +21,26 @@ paths:
         - $ref: "#/components/parameters/DepartureDateParam"
         - $ref: "#/components/parameters/ReturnDateParam"
         - $ref: "#/components/parameters/AdultCountParam"
+        - $ref: "#/components/parameters/ChildCountParam"
+        - $ref: "#/components/parameters/InfantCountParam"
+        - $ref: "#/components/parameters/MinPriceParam"
+        - $ref: "#/components/parameters/MaxPriceParam"
+        - $ref: "#/components/parameters/MinSegmentsParam"
+        - $ref: "#/components/parameters/MaxSegmentsParam"
+        - $ref: "#/components/parameters/MinTotalDurationMinutesParam"
+        - $ref: "#/components/parameters/MaxTotalDurationMinutesParam"
+        - $ref: "#/components/parameters/MinIndividualSegmentDurationMinutesParam"
+        - $ref: "#/components/parameters/MaxIndividualSegmentDurationMinutesParam"
+        - $ref: "#/components/parameters/MinLayoverMinutesParam"
+        - $ref: "#/components/parameters/MaxLayoverMinutesParam"
+        - $ref: "#/components/parameters/DepartureOutboundFromParam"
+        - $ref: "#/components/parameters/DepartureOutboundToParam"
+        - $ref: "#/components/parameters/ArrivalOutboundFromParam"
+        - $ref: "#/components/parameters/ArrivalOutboundToParam"
+        - $ref: "#/components/parameters/DepartureInboundFromParam"
+        - $ref: "#/components/parameters/DepartureInboundToParam"
+        - $ref: "#/components/parameters/ArrivalInboundFromParam"
+        - $ref: "#/components/parameters/ArrivalInboundToParam"
       responses:
         "200":
           description: Server-sent events stream. Emits `search_id`, `offers`, and `done` events.
@@ -100,6 +120,158 @@ components:
         format: int32
         x-oapi-codegen-extra-tags:
           validate: required,min=1
+    ChildCountParam:
+      name: childCount
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    InfantCountParam:
+      name: infantCount
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MinPriceParam:
+      name: minPrice
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 0
+        format: double
+    MaxPriceParam:
+      name: maxPrice
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 0
+        format: double
+    MinSegmentsParam:
+      name: minSegments
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MaxSegmentsParam:
+      name: maxSegments
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MinTotalDurationMinutesParam:
+      name: minTotalDurationMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MaxTotalDurationMinutesParam:
+      name: maxTotalDurationMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MinIndividualSegmentDurationMinutesParam:
+      name: minIndividualSegmentDurationMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MaxIndividualSegmentDurationMinutesParam:
+      name: maxIndividualSegmentDurationMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MinLayoverMinutesParam:
+      name: minLayoverMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    MaxLayoverMinutesParam:
+      name: maxLayoverMinutes
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        format: int32
+    DepartureOutboundFromParam:
+      name: departureOutboundFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    DepartureOutboundToParam:
+      name: departureOutboundTo
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    ArrivalOutboundFromParam:
+      name: arrivalOutboundFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    ArrivalOutboundToParam:
+      name: arrivalOutboundTo
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    DepartureInboundFromParam:
+      name: departureInboundFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    DepartureInboundToParam:
+      name: departureInboundTo
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    ArrivalInboundFromParam:
+      name: arrivalInboundFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    ArrivalInboundToParam:
+      name: arrivalInboundTo
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
   schemas:
     FlightSearchResponse:
       type: object

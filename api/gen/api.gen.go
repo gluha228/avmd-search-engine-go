@@ -28,22 +28,102 @@ type AdultCountParam = int32
 // ArrivalAirportCodeParam defines model for ArrivalAirportCodeParam.
 type ArrivalAirportCodeParam = string
 
+// ArrivalInboundFromParam defines model for ArrivalInboundFromParam.
+type ArrivalInboundFromParam = string
+
+// ArrivalInboundToParam defines model for ArrivalInboundToParam.
+type ArrivalInboundToParam = string
+
+// ArrivalOutboundFromParam defines model for ArrivalOutboundFromParam.
+type ArrivalOutboundFromParam = string
+
+// ArrivalOutboundToParam defines model for ArrivalOutboundToParam.
+type ArrivalOutboundToParam = string
+
+// ChildCountParam defines model for ChildCountParam.
+type ChildCountParam = int32
+
 // DepartureAirportCodeParam defines model for DepartureAirportCodeParam.
 type DepartureAirportCodeParam = string
 
 // DepartureDateParam defines model for DepartureDateParam.
 type DepartureDateParam = openapi_types.Date
 
+// DepartureInboundFromParam defines model for DepartureInboundFromParam.
+type DepartureInboundFromParam = string
+
+// DepartureInboundToParam defines model for DepartureInboundToParam.
+type DepartureInboundToParam = string
+
+// DepartureOutboundFromParam defines model for DepartureOutboundFromParam.
+type DepartureOutboundFromParam = string
+
+// DepartureOutboundToParam defines model for DepartureOutboundToParam.
+type DepartureOutboundToParam = string
+
+// InfantCountParam defines model for InfantCountParam.
+type InfantCountParam = int32
+
+// MaxIndividualSegmentDurationMinutesParam defines model for MaxIndividualSegmentDurationMinutesParam.
+type MaxIndividualSegmentDurationMinutesParam = int32
+
+// MaxLayoverMinutesParam defines model for MaxLayoverMinutesParam.
+type MaxLayoverMinutesParam = int32
+
+// MaxPriceParam defines model for MaxPriceParam.
+type MaxPriceParam = float64
+
+// MaxSegmentsParam defines model for MaxSegmentsParam.
+type MaxSegmentsParam = int32
+
+// MaxTotalDurationMinutesParam defines model for MaxTotalDurationMinutesParam.
+type MaxTotalDurationMinutesParam = int32
+
+// MinIndividualSegmentDurationMinutesParam defines model for MinIndividualSegmentDurationMinutesParam.
+type MinIndividualSegmentDurationMinutesParam = int32
+
+// MinLayoverMinutesParam defines model for MinLayoverMinutesParam.
+type MinLayoverMinutesParam = int32
+
+// MinPriceParam defines model for MinPriceParam.
+type MinPriceParam = float64
+
+// MinSegmentsParam defines model for MinSegmentsParam.
+type MinSegmentsParam = int32
+
+// MinTotalDurationMinutesParam defines model for MinTotalDurationMinutesParam.
+type MinTotalDurationMinutesParam = int32
+
 // ReturnDateParam defines model for ReturnDateParam.
 type ReturnDateParam = openapi_types.Date
 
 // SearchFlightsParams defines parameters for SearchFlights.
 type SearchFlightsParams struct {
-	DepartureAirportCode DepartureAirportCodeParam `form:"departureAirportCode" json:"departureAirportCode" validate:"required,len=3,uppercase,alpha"`
-	ArrivalAirportCode   ArrivalAirportCodeParam   `form:"arrivalAirportCode" json:"arrivalAirportCode" validate:"required,len=3,uppercase,alpha"`
-	DepartureDate        DepartureDateParam        `form:"departureDate" json:"departureDate" validate:"required"`
-	ReturnDate           *ReturnDateParam          `form:"returnDate,omitempty" json:"returnDate,omitempty"`
-	AdultCount           AdultCountParam           `form:"adultCount" json:"adultCount" validate:"required,min=1"`
+	DepartureAirportCode                DepartureAirportCodeParam                 `form:"departureAirportCode" json:"departureAirportCode" validate:"required,len=3,uppercase,alpha"`
+	ArrivalAirportCode                  ArrivalAirportCodeParam                   `form:"arrivalAirportCode" json:"arrivalAirportCode" validate:"required,len=3,uppercase,alpha"`
+	DepartureDate                       DepartureDateParam                        `form:"departureDate" json:"departureDate" validate:"required"`
+	ReturnDate                          *ReturnDateParam                          `form:"returnDate,omitempty" json:"returnDate,omitempty"`
+	AdultCount                          AdultCountParam                           `form:"adultCount" json:"adultCount" validate:"required,min=1"`
+	ChildCount                          *ChildCountParam                          `form:"childCount,omitempty" json:"childCount,omitempty"`
+	InfantCount                         *InfantCountParam                         `form:"infantCount,omitempty" json:"infantCount,omitempty"`
+	MinPrice                            *MinPriceParam                            `form:"minPrice,omitempty" json:"minPrice,omitempty"`
+	MaxPrice                            *MaxPriceParam                            `form:"maxPrice,omitempty" json:"maxPrice,omitempty"`
+	MinSegments                         *MinSegmentsParam                         `form:"minSegments,omitempty" json:"minSegments,omitempty"`
+	MaxSegments                         *MaxSegmentsParam                         `form:"maxSegments,omitempty" json:"maxSegments,omitempty"`
+	MinTotalDurationMinutes             *MinTotalDurationMinutesParam             `form:"minTotalDurationMinutes,omitempty" json:"minTotalDurationMinutes,omitempty"`
+	MaxTotalDurationMinutes             *MaxTotalDurationMinutesParam             `form:"maxTotalDurationMinutes,omitempty" json:"maxTotalDurationMinutes,omitempty"`
+	MinIndividualSegmentDurationMinutes *MinIndividualSegmentDurationMinutesParam `form:"minIndividualSegmentDurationMinutes,omitempty" json:"minIndividualSegmentDurationMinutes,omitempty"`
+	MaxIndividualSegmentDurationMinutes *MaxIndividualSegmentDurationMinutesParam `form:"maxIndividualSegmentDurationMinutes,omitempty" json:"maxIndividualSegmentDurationMinutes,omitempty"`
+	MinLayoverMinutes                   *MinLayoverMinutesParam                   `form:"minLayoverMinutes,omitempty" json:"minLayoverMinutes,omitempty"`
+	MaxLayoverMinutes                   *MaxLayoverMinutesParam                   `form:"maxLayoverMinutes,omitempty" json:"maxLayoverMinutes,omitempty"`
+	DepartureOutboundFrom               *DepartureOutboundFromParam               `form:"departureOutboundFrom,omitempty" json:"departureOutboundFrom,omitempty"`
+	DepartureOutboundTo                 *DepartureOutboundToParam                 `form:"departureOutboundTo,omitempty" json:"departureOutboundTo,omitempty"`
+	ArrivalOutboundFrom                 *ArrivalOutboundFromParam                 `form:"arrivalOutboundFrom,omitempty" json:"arrivalOutboundFrom,omitempty"`
+	ArrivalOutboundTo                   *ArrivalOutboundToParam                   `form:"arrivalOutboundTo,omitempty" json:"arrivalOutboundTo,omitempty"`
+	DepartureInboundFrom                *DepartureInboundFromParam                `form:"departureInboundFrom,omitempty" json:"departureInboundFrom,omitempty"`
+	DepartureInboundTo                  *DepartureInboundToParam                  `form:"departureInboundTo,omitempty" json:"departureInboundTo,omitempty"`
+	ArrivalInboundFrom                  *ArrivalInboundFromParam                  `form:"arrivalInboundFrom,omitempty" json:"arrivalInboundFrom,omitempty"`
+	ArrivalInboundTo                    *ArrivalInboundToParam                    `form:"arrivalInboundTo,omitempty" json:"arrivalInboundTo,omitempty"`
 }
 
 // ServerInterface represents all server handlers.
@@ -141,6 +221,266 @@ func (siw *ServerInterfaceWrapper) SearchFlights(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "adultCount"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "adultCount", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "childCount" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "childCount", r.URL.Query(), &params.ChildCount, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "childCount"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "childCount", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "infantCount" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "infantCount", r.URL.Query(), &params.InfantCount, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "infantCount"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "infantCount", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "minPrice" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "minPrice", r.URL.Query(), &params.MinPrice, runtime.BindQueryParameterOptions{Type: "number", Format: "double"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "minPrice"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "minPrice", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "maxPrice" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "maxPrice", r.URL.Query(), &params.MaxPrice, runtime.BindQueryParameterOptions{Type: "number", Format: "double"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "maxPrice"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "maxPrice", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "minSegments" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "minSegments", r.URL.Query(), &params.MinSegments, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "minSegments"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "minSegments", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "maxSegments" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "maxSegments", r.URL.Query(), &params.MaxSegments, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "maxSegments"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "maxSegments", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "minTotalDurationMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "minTotalDurationMinutes", r.URL.Query(), &params.MinTotalDurationMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "minTotalDurationMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "minTotalDurationMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "maxTotalDurationMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "maxTotalDurationMinutes", r.URL.Query(), &params.MaxTotalDurationMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "maxTotalDurationMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "maxTotalDurationMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "minIndividualSegmentDurationMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "minIndividualSegmentDurationMinutes", r.URL.Query(), &params.MinIndividualSegmentDurationMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "minIndividualSegmentDurationMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "minIndividualSegmentDurationMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "maxIndividualSegmentDurationMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "maxIndividualSegmentDurationMinutes", r.URL.Query(), &params.MaxIndividualSegmentDurationMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "maxIndividualSegmentDurationMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "maxIndividualSegmentDurationMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "minLayoverMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "minLayoverMinutes", r.URL.Query(), &params.MinLayoverMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "minLayoverMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "minLayoverMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "maxLayoverMinutes" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "maxLayoverMinutes", r.URL.Query(), &params.MaxLayoverMinutes, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "maxLayoverMinutes"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "maxLayoverMinutes", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "departureOutboundFrom" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "departureOutboundFrom", r.URL.Query(), &params.DepartureOutboundFrom, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "departureOutboundFrom"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "departureOutboundFrom", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "departureOutboundTo" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "departureOutboundTo", r.URL.Query(), &params.DepartureOutboundTo, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "departureOutboundTo"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "departureOutboundTo", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "arrivalOutboundFrom" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "arrivalOutboundFrom", r.URL.Query(), &params.ArrivalOutboundFrom, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "arrivalOutboundFrom"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "arrivalOutboundFrom", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "arrivalOutboundTo" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "arrivalOutboundTo", r.URL.Query(), &params.ArrivalOutboundTo, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "arrivalOutboundTo"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "arrivalOutboundTo", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "departureInboundFrom" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "departureInboundFrom", r.URL.Query(), &params.DepartureInboundFrom, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "departureInboundFrom"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "departureInboundFrom", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "departureInboundTo" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "departureInboundTo", r.URL.Query(), &params.DepartureInboundTo, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "departureInboundTo"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "departureInboundTo", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "arrivalInboundFrom" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "arrivalInboundFrom", r.URL.Query(), &params.ArrivalInboundFrom, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "arrivalInboundFrom"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "arrivalInboundFrom", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "arrivalInboundTo" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "arrivalInboundTo", r.URL.Query(), &params.ArrivalInboundTo, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "arrivalInboundTo"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "arrivalInboundTo", Err: err})
 		}
 		return
 	}

@@ -3,11 +3,31 @@ package flights
 import "time"
 
 type SearchRequest struct {
-	DepartureAirportCode string
-	ArrivalAirportCode   string
-	DepartureDate        time.Time
-	ReturnDate           *time.Time
-	AdultCount           int
+	DepartureAirportCode                string
+	ArrivalAirportCode                  string
+	DepartureDate                       time.Time
+	ReturnDate                          *time.Time
+	AdultCount                          int
+	ChildCount                          int
+	InfantCount                         int
+	MinPrice                            *float64
+	MaxPrice                            *float64
+	MinSegments                         *int
+	MaxSegments                         *int
+	MinTotalDurationMinutes             *int
+	MaxTotalDurationMinutes             *int
+	MinIndividualSegmentDurationMinutes *int
+	MaxIndividualSegmentDurationMinutes *int
+	MinLayoverMinutes                   *int
+	MaxLayoverMinutes                   *int
+	DepartureOutboundFrom               *time.Time
+	DepartureOutboundTo                 *time.Time
+	ArrivalOutboundFrom                 *time.Time
+	ArrivalOutboundTo                   *time.Time
+	DepartureInboundFrom                *time.Time
+	DepartureInboundTo                  *time.Time
+	ArrivalInboundFrom                  *time.Time
+	ArrivalInboundTo                    *time.Time
 }
 
 type SearchResponse struct {
