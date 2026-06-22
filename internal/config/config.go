@@ -11,6 +11,7 @@ type Config struct {
 	RedisPassword         string `env:"REDIS_PASSWORD"`
 	RedisDB               int    `env:"REDIS_DB" envDefault:"0"`
 	RedisSessionTTLHours  int    `env:"REDIS_SESSION_TTL_HOURS" envDefault:"24"`
+	RedisCalendarTTLHours int    `env:"REDIS_CALENDAR_TTL_HOURS" envDefault:"720"`
 	TFBaseURL             string `env:"TF_BASE_URL" envDefault:"http://api.travelfusion.com"`
 	TFXmlLoginID          string `env:"TF_XML_LOGIN_ID"`
 	TFLoginID             string `env:"TF_LOGIN_ID"`

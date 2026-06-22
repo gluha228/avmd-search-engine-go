@@ -17,9 +17,21 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// CalendarResponse defines model for CalendarResponse.
+type CalendarResponse struct {
+	Calendar []FlightDay `json:"calendar"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Message string `json:"message"`
+}
+
+// FlightDay defines model for FlightDay.
+type FlightDay struct {
+	CurrencyCode string             `json:"currency_code"`
+	Date         openapi_types.Date `json:"date"`
+	Price        float64            `json:"price"`
 }
 
 // AdultCountParam defines model for AdultCountParam.
@@ -42,6 +54,12 @@ type ArrivalOutboundToParam = string
 
 // ChildCountParam defines model for ChildCountParam.
 type ChildCountParam = int32
+
+// DateFromParam defines model for DateFromParam.
+type DateFromParam = openapi_types.Date
+
+// DateToParam defines model for DateToParam.
+type DateToParam = openapi_types.Date
 
 // DepartureAirportCodeParam defines model for DepartureAirportCodeParam.
 type DepartureAirportCodeParam = string
@@ -97,6 +115,14 @@ type MinTotalDurationMinutesParam = int32
 // ReturnDateParam defines model for ReturnDateParam.
 type ReturnDateParam = openapi_types.Date
 
+// GetCalendarParams defines parameters for GetCalendar.
+type GetCalendarParams struct {
+	DepartureAirportCode DepartureAirportCodeParam `form:"departureAirportCode" json:"departureAirportCode" validate:"required,len=3,uppercase,alpha"`
+	ArrivalAirportCode   ArrivalAirportCodeParam   `form:"arrivalAirportCode" json:"arrivalAirportCode" validate:"required,len=3,uppercase,alpha"`
+	DateFrom             DateFromParam             `form:"dateFrom" json:"dateFrom" validate:"required"`
+	DateTo               DateToParam               `form:"dateTo" json:"dateTo" validate:"required"`
+}
+
 // SearchFlightsParams defines parameters for SearchFlights.
 type SearchFlightsParams struct {
 	DepartureAirportCode                DepartureAirportCodeParam                 `form:"departureAirportCode" json:"departureAirportCode" validate:"required,len=3,uppercase,alpha"`
@@ -129,6 +155,9 @@ type SearchFlightsParams struct {
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /api/v1/flights/calendar)
+	GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams)
+
 	// (GET /api/v1/flights/search)
 	SearchFlights(w http.ResponseWriter, r *http.Request, params SearchFlightsParams)
 }
@@ -136,6 +165,11 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// (GET /api/v1/flights/calendar)
+func (_ Unimplemented) GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // (GET /api/v1/flights/search)
 func (_ Unimplemented) SearchFlights(w http.ResponseWriter, r *http.Request, params SearchFlightsParams) {
@@ -150,6 +184,78 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetCalendar operation middleware
+func (siw *ServerInterfaceWrapper) GetCalendar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCalendarParams
+
+	// ------------- Required query parameter "departureAirportCode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "departureAirportCode", r.URL.Query(), &params.DepartureAirportCode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "departureAirportCode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "departureAirportCode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "arrivalAirportCode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "arrivalAirportCode", r.URL.Query(), &params.ArrivalAirportCode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "arrivalAirportCode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "arrivalAirportCode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "dateFrom" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "dateFrom", r.URL.Query(), &params.DateFrom, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "dateFrom"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "dateFrom", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "dateTo" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "dateTo", r.URL.Query(), &params.DateTo, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "dateTo"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "dateTo", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCalendar(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // SearchFlights operation middleware
 func (siw *ServerInterfaceWrapper) SearchFlights(w http.ResponseWriter, r *http.Request) {
@@ -610,10 +716,63 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/flights/calendar", wrapper.GetCalendar)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/flights/search", wrapper.SearchFlights)
 	})
 
 	return r
+}
+
+type GetCalendarRequestObject struct {
+	Params GetCalendarParams
+}
+
+type GetCalendarResponseObject interface {
+	VisitGetCalendarResponse(w http.ResponseWriter) error
+}
+
+type GetCalendar200JSONResponse CalendarResponse
+
+func (response GetCalendar200JSONResponse) VisitGetCalendarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCalendar400JSONResponse Error
+
+func (response GetCalendar400JSONResponse) VisitGetCalendarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCalendar500JSONResponse Error
+
+func (response GetCalendar500JSONResponse) VisitGetCalendarResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type SearchFlightsRequestObject struct {
@@ -698,6 +857,9 @@ func (response SearchFlights500JSONResponse) VisitSearchFlightsResponse(w http.R
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (GET /api/v1/flights/calendar)
+	GetCalendar(ctx context.Context, request GetCalendarRequestObject) (GetCalendarResponseObject, error)
+
 	// (GET /api/v1/flights/search)
 	SearchFlights(ctx context.Context, request SearchFlightsRequestObject) (SearchFlightsResponseObject, error)
 }
@@ -729,6 +891,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetCalendar operation middleware
+func (sh *strictHandler) GetCalendar(w http.ResponseWriter, r *http.Request, params GetCalendarParams) {
+	var request GetCalendarRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCalendar(ctx, request.(GetCalendarRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCalendar")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCalendarResponseObject); ok {
+		if err := validResponse.VisitGetCalendarResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // SearchFlights operation middleware

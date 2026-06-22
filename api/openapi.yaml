@@ -11,6 +11,34 @@ tags:
   - name: Flights
 
 paths:
+  /api/v1/flights/calendar:
+    get:
+      tags: [Flights]
+      operationId: getCalendar
+      parameters:
+        - $ref: "#/components/parameters/DepartureAirportCodeParam"
+        - $ref: "#/components/parameters/ArrivalAirportCodeParam"
+        - $ref: "#/components/parameters/DateFromParam"
+        - $ref: "#/components/parameters/DateToParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/flights/search:
     get:
       tags: [Flights]
@@ -110,6 +138,24 @@ components:
       schema:
         type: string
         format: date
+    DateFromParam:
+      name: dateFrom
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        x-oapi-codegen-extra-tags:
+          validate: required
+    DateToParam:
+      name: dateTo
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+        x-oapi-codegen-extra-tags:
+          validate: required
     AdultCountParam:
       name: adultCount
       in: query
@@ -273,6 +319,26 @@ components:
         type: string
         pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
   schemas:
+    CalendarResponse:
+      type: object
+      required: [calendar]
+      properties:
+        calendar:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlightDay"
+    FlightDay:
+      type: object
+      required: [date, price, currency_code]
+      properties:
+        date:
+          type: string
+          format: date
+        price:
+          type: number
+          format: double
+        currency_code:
+          type: string
     FlightSearchResponse:
       type: object
       required: [search_id, routing_id, offers]

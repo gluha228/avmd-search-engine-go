@@ -19,6 +19,16 @@ type fakeSessionStore struct {
 	err      error
 }
 
+type fakeCalendarCache struct {
+	calls []calendarCacheCall
+}
+
+type calendarCacheCall struct {
+	departure string
+	arrival   string
+	flights   []travelfusion.Flight
+}
+
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
 }
@@ -31,6 +41,11 @@ func (f *fakeSessionStore) Create(_ context.Context, session FlightSearchSession
 func (f *fakeSessionStore) Save(_ context.Context, _ string, session FlightSearchSession) error {
 	f.session = session
 	return f.err
+}
+
+func (f *fakeCalendarCache) CacheFlights(_ context.Context, departure, arrival string, flights []travelfusion.Flight) error {
+	f.calls = append(f.calls, calendarCacheCall{departure: departure, arrival: arrival, flights: flights})
+	return nil
 }
 
 func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
@@ -87,6 +102,35 @@ func TestSearchCreatesFlightSearchSession(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("unexpected stored session: %+v", store.session)
+	}
+}
+
+func TestSearchCachesRawTravelfusionFlightsForCalendar(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	cache := &fakeCalendarCache{}
+	service := NewServiceWithDependencies(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID: "RID",
+		OutwardFlights: []travelfusion.Flight{
+			tfFlight("OUT1", "KIV", "OTP", departure.AddDate(0, 0, -1), 100),
+			tfFlight("OUT2", "KIV", "OTP", departure, 200),
+		},
+	}}, nil, cache, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	_, err := service.Search(context.Background(), SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(cache.calls) != 1 {
+		t.Fatalf("expected one calendar cache call, got %d", len(cache.calls))
+	}
+	if len(cache.calls[0].flights) != 2 {
+		t.Fatalf("expected raw TF flights to be cached before date filtering, got %d", len(cache.calls[0].flights))
 	}
 }
 

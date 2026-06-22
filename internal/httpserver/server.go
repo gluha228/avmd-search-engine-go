@@ -3,6 +3,7 @@ package httpserver
 import (
 	apispec "avmd-search-engine-go/api"
 	"avmd-search-engine-go/api/gen"
+	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/flights"
 	flightsession "avmd-search-engine-go/internal/flights/session"
@@ -19,10 +20,11 @@ import (
 )
 
 type HttpServer struct {
-	cfg           *config.Config
-	flightService *flights.Service
-	logger        *slog.Logger
-	validator     *validator.Validate
+	cfg             *config.Config
+	calendarService *calendar.Service
+	flightService   *flights.Service
+	logger          *slog.Logger
+	validator       *validator.Validate
 }
 
 func NewHttpServer(cfg *config.Config, logger *slog.Logger) *HttpServer {
@@ -52,7 +54,12 @@ func (s *HttpServer) InitHandlers() {
 		time.Duration(s.cfg.RedisSessionTTLHours)*time.Hour,
 		s.logger,
 	)
-	s.flightService = flights.NewServiceWithSessionStore(tfClient, sessionStore, s.logger)
+	priceStore := calendar.NewRedisPriceStore(
+		redisClient,
+		time.Duration(s.cfg.RedisCalendarTTLHours)*time.Hour,
+	)
+	s.calendarService = calendar.NewService(priceStore, s.logger)
+	s.flightService = flights.NewServiceWithDependencies(tfClient, sessionStore, s.calendarService, s.logger)
 }
 
 func (s *HttpServer) CreateHandler() http.Handler {

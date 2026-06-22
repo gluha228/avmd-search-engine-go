@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/flights"
 	"avmd-search-engine-go/internal/travelfusion"
@@ -29,6 +30,10 @@ type fakeSessionStore struct {
 	err      error
 }
 
+type fakeCalendarPriceStore struct {
+	entries map[string]calendar.PriceEntry
+}
+
 func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearchSession) (string, error) {
 	f.session = session
 	return f.searchID, f.err
@@ -37,6 +42,19 @@ func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearc
 func (f *fakeSessionStore) Save(_ context.Context, _ string, session flights.FlightSearchSession) error {
 	f.session = session
 	return f.err
+}
+
+func (f *fakeCalendarPriceStore) GetMinPrice(_ context.Context, origin, destination string, date time.Time) (*calendar.PriceEntry, error) {
+	entry, ok := f.entries[origin+":"+destination+":"+date.Format(time.DateOnly)]
+	if !ok {
+		return nil, nil
+	}
+	return &entry, nil
+}
+
+func (f *fakeCalendarPriceStore) SetMinPriceIfLower(_ context.Context, origin, destination string, date time.Time, entry calendar.PriceEntry) error {
+	f.entries[origin+":"+destination+":"+date.Format(time.DateOnly)] = entry
+	return nil
 }
 
 func TestOpenAPISpecEndpoint(t *testing.T) {
@@ -171,5 +189,30 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
+	}
+}
+
+func TestGetCalendarReturnsCachedPrices(t *testing.T) {
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	calendarService := calendar.NewService(&fakeCalendarPriceStore{entries: map[string]calendar.PriceEntry{
+		"KIV:OTP:2026-07-02": {Price: 123.45, CurrencyCode: "EUR"},
+	}}, nil)
+	server.calendarService = calendarService
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/flights/calendar?departureAirportCode=KIV&arrivalAirportCode=OTP&dateFrom=2026-07-01&dateTo=2026-07-03",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	body := recorder.Body.String()
+	if !strings.Contains(body, `"date":"2026-07-02"`) || !strings.Contains(body, `"price":123.45`) {
+		t.Fatalf("unexpected calendar response: %s", body)
 	}
 }

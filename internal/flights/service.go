@@ -25,9 +25,14 @@ type SessionStore interface {
 	Save(ctx context.Context, searchID string, session FlightSearchSession) error
 }
 
+type CalendarCache interface {
+	CacheFlights(ctx context.Context, departure, arrival string, flights []travelfusion.Flight) error
+}
+
 type Service struct {
 	tfClient     TravelfusionClient
 	sessionStore SessionStore
+	calendar     CalendarCache
 	logger       *slog.Logger
 	now          func() time.Time
 }
@@ -41,9 +46,19 @@ func NewServiceWithSessionStore(
 	sessionStore SessionStore,
 	logger *slog.Logger,
 ) *Service {
+	return NewServiceWithDependencies(tfClient, sessionStore, nil, logger)
+}
+
+func NewServiceWithDependencies(
+	tfClient TravelfusionClient,
+	sessionStore SessionStore,
+	calendarCache CalendarCache,
+	logger *slog.Logger,
+) *Service {
 	return &Service{
 		tfClient:     tfClient,
 		sessionStore: sessionStore,
+		calendar:     calendarCache,
 		logger:       logger,
 		now:          time.Now,
 	}
@@ -89,6 +104,16 @@ func (s *Service) SearchIntoSession(
 	})
 	if err != nil {
 		return nil, err
+	}
+	if s.calendar != nil {
+		if err := s.calendar.CacheFlights(ctx, req.DepartureAirportCode, req.ArrivalAirportCode, tfResult.OutwardFlights); err != nil && s.logger != nil {
+			s.logger.Warn("failed to cache outbound calendar prices", "error", err)
+		}
+		if req.ReturnDate != nil {
+			if err := s.calendar.CacheFlights(ctx, req.ArrivalAirportCode, req.DepartureAirportCode, tfResult.ReturnFlights); err != nil && s.logger != nil {
+				s.logger.Warn("failed to cache inbound calendar prices", "error", err)
+			}
+		}
 	}
 
 	outwardFlights := filterToDate(tfResult.OutwardFlights, req.DepartureDate)
