@@ -106,6 +106,27 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (*SearchResult, 
 	return result, nil
 }
 
+func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	payload, err := buildGetCurrenciesXML(c.xmlLoginID, c.loginID)
+	if err != nil {
+		return nil, fmt.Errorf("build get currencies request: %w", err)
+	}
+	body, err := c.postXML(ctx, payload)
+	if err != nil {
+		return nil, fmt.Errorf("get currencies: %w", err)
+	}
+
+	var resp commandListGetCurrenciesResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parse get currencies response: %w", err)
+	}
+	return mapCurrencies(resp.GetCurrencies), nil
+}
+
 func (c *Client) postXML(ctx context.Context, payload []byte) ([]byte, error) {
 	body := append([]byte(xml.Header), payload...)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewReader(body))

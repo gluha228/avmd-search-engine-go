@@ -2,8 +2,8 @@ package calendar
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,18 +25,18 @@ func NewRedisPriceStore(client *redis.Client, ttl time.Duration) *RedisPriceStor
 }
 
 func (s *RedisPriceStore) GetMinPrice(ctx context.Context, origin, destination string, date time.Time) (*PriceEntry, error) {
-	payload, err := s.client.Get(ctx, buildPriceKey(origin, destination, date)).Bytes()
+	value, err := s.client.Get(ctx, buildPriceKey(origin, destination, date)).Result()
 	if err == redis.Nil {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get calendar price: %w", err)
 	}
-	var entry PriceEntry
-	if err := json.Unmarshal(payload, &entry); err != nil {
-		return nil, fmt.Errorf("unmarshal calendar price: %w", err)
+	price, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return nil, fmt.Errorf("parse calendar price: %w", err)
 	}
-	return &entry, nil
+	return &PriceEntry{Price: price}, nil
 }
 
 func (s *RedisPriceStore) SetMinPriceIfLower(ctx context.Context, origin, destination string, date time.Time, entry PriceEntry) error {
@@ -54,11 +54,8 @@ func (s *RedisPriceStore) SetMinPriceIfLower(ctx context.Context, origin, destin
 }
 
 func (s *RedisPriceStore) SetMinPrice(ctx context.Context, origin, destination string, date time.Time, entry PriceEntry) error {
-	payload, err := json.Marshal(entry)
-	if err != nil {
-		return fmt.Errorf("marshal calendar price: %w", err)
-	}
-	if err := s.client.Set(ctx, buildPriceKey(origin, destination, date), payload, s.ttl).Err(); err != nil {
+	value := strconv.FormatFloat(entry.Price, 'f', -1, 64)
+	if err := s.client.Set(ctx, buildPriceKey(origin, destination, date), value, s.ttl).Err(); err != nil {
 		return fmt.Errorf("set calendar price: %w", err)
 	}
 	return nil

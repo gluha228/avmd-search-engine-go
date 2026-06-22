@@ -196,7 +196,7 @@ func TestGetCalendarReturnsCachedPrices(t *testing.T) {
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	calendarService := calendar.NewService(&fakeCalendarPriceStore{entries: map[string]calendar.PriceEntry{
 		"KIV:OTP:2026-07-02": {Price: 123.45, CurrencyCode: "EUR"},
-	}}, nil)
+	}}, "EUR", nil, nil)
 	server.calendarService = calendarService
 
 	request := httptest.NewRequest(

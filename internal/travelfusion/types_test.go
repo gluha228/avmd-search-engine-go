@@ -74,6 +74,47 @@ func TestBuildStartRoutingXMLAddsChildrenAndInfants(t *testing.T) {
 	}
 }
 
+func TestBuildGetCurrenciesXML(t *testing.T) {
+	payload, err := buildGetCurrenciesXML("xml-login", "login")
+	if err != nil {
+		t.Fatalf("buildGetCurrenciesXML returned error: %v", err)
+	}
+
+	xmlBody := string(payload)
+	for _, part := range []string{
+		"<GetCurrencies>",
+		"<XmlLoginId>xml-login</XmlLoginId>",
+		"<LoginId>login</LoginId>",
+	} {
+		if !strings.Contains(xmlBody, part) {
+			t.Fatalf("expected XML to contain %q, got %s", part, xmlBody)
+		}
+	}
+}
+
+func TestMapCurrencies(t *testing.T) {
+	body := []byte(`<CommandList>
+  <GetCurrencies>
+    <CurrencyList>
+      <Currency>
+        <Name>Euro</Name>
+        <Code>eur</Code>
+        <UsdRate>0.9</UsdRate>
+      </Currency>
+    </CurrencyList>
+  </GetCurrencies>
+</CommandList>`)
+
+	var resp commandListGetCurrenciesResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	currencies := mapCurrencies(resp.GetCurrencies)
+	if currencies["EUR"].Name != "Euro" || currencies["EUR"].USDRate != 0.9 {
+		t.Fatalf("unexpected currencies: %+v", currencies)
+	}
+}
+
 func TestExtractFlights(t *testing.T) {
 	body := []byte(`<CommandList>
   <CheckRouting>

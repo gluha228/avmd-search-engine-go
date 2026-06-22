@@ -20,17 +20,28 @@ type PriceStore interface {
 	SetMinPriceIfLower(ctx context.Context, origin, destination string, date time.Time, entry PriceEntry) error
 }
 
-type Service struct {
-	store  PriceStore
-	logger *slog.Logger
-	now    func() time.Time
+type CurrencyConverter interface {
+	Convert(ctx context.Context, amount float64, from, to string) (float64, error)
 }
 
-func NewService(store PriceStore, logger *slog.Logger) *Service {
+type Service struct {
+	store           PriceStore
+	currency        CurrencyConverter
+	defaultCurrency string
+	logger          *slog.Logger
+	now             func() time.Time
+}
+
+func NewService(store PriceStore, defaultCurrency string, currency CurrencyConverter, logger *slog.Logger) *Service {
+	if defaultCurrency == "" {
+		defaultCurrency = "EUR"
+	}
 	return &Service{
-		store:  store,
-		logger: logger,
-		now:    time.Now,
+		store:           store,
+		currency:        currency,
+		defaultCurrency: defaultCurrency,
+		logger:          logger,
+		now:             time.Now,
 	}
 }
 
@@ -48,10 +59,14 @@ func (s *Service) GetCalendar(ctx context.Context, req Request) (*Response, erro
 		if entry == nil {
 			continue
 		}
+		currencyCode := entry.CurrencyCode
+		if currencyCode == "" {
+			currencyCode = s.defaultCurrency
+		}
 		days = append(days, FlightDay{
 			Date:         current.Format(time.DateOnly),
 			Price:        entry.Price,
-			CurrencyCode: entry.CurrencyCode,
+			CurrencyCode: currencyCode,
 		})
 	}
 
@@ -65,9 +80,18 @@ func (s *Service) CacheFlights(ctx context.Context, departure, arrival string, f
 			continue
 		}
 		date := dateOnly(flight.DepartureTime).Format(time.DateOnly)
+		price := flight.Price
+		if s.currency != nil {
+			converted, err := s.currency.Convert(ctx, flight.Price, flight.Currency, s.defaultCurrency)
+			if err == nil {
+				price = converted
+			} else if s.logger != nil {
+				s.logger.Warn("failed to convert calendar price, using original price", "from", flight.Currency, "to", s.defaultCurrency, "error", err)
+			}
+		}
 		entry := PriceEntry{
-			Price:        flight.Price,
-			CurrencyCode: flight.Currency,
+			Price:        price,
+			CurrencyCode: s.defaultCurrency,
 		}
 		if current, ok := minByDate[date]; !ok || entry.Price < current.Price {
 			minByDate[date] = entry

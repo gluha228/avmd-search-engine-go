@@ -5,9 +5,11 @@ import (
 	"avmd-search-engine-go/api/gen"
 	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
+	"avmd-search-engine-go/internal/currencies"
 	"avmd-search-engine-go/internal/flights"
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/travelfusion"
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -22,6 +24,7 @@ import (
 type HttpServer struct {
 	cfg             *config.Config
 	calendarService *calendar.Service
+	currencyService *currencies.Service
 	flightService   *flights.Service
 	logger          *slog.Logger
 	validator       *validator.Validate
@@ -58,7 +61,20 @@ func (s *HttpServer) InitHandlers() {
 		redisClient,
 		time.Duration(s.cfg.RedisCalendarTTLHours)*time.Hour,
 	)
-	s.calendarService = calendar.NewService(priceStore, s.logger)
+	currencyStore := currencies.NewRedisStore(redisClient)
+	s.currencyService = currencies.NewService(
+		tfClient,
+		currencyStore,
+		currencies.Config{
+			UpdateCron: s.cfg.TFCurrenciesUpdateCron,
+			UpdateTime: s.cfg.TFCurrenciesUpdateTime,
+		},
+		s.logger,
+	)
+	if err := s.currencyService.Start(context.Background()); err != nil && s.logger != nil {
+		s.logger.Warn("failed to start currency scheduler", "error", err)
+	}
+	s.calendarService = calendar.NewService(priceStore, s.cfg.DefaultCurrencyCode, s.currencyService, s.logger)
 	s.flightService = flights.NewServiceWithDependencies(tfClient, sessionStore, s.calendarService, s.logger)
 }
 

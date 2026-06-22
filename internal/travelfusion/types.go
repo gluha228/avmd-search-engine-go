@@ -24,6 +24,12 @@ type SearchResult struct {
 	ReturnFlights  []Flight
 }
 
+type Currency struct {
+	Name    string
+	Code    string
+	USDRate float64
+}
+
 type Flight struct {
 	ID                 string
 	Origin             string
