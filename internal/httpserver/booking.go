@@ -10,6 +10,23 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+func (s *HttpServer) GetSeatMap(
+	ctx context.Context,
+	request api.GetSeatMapRequestObject,
+) (api.GetSeatMapResponseObject, error) {
+	seatMap, err := s.flightService.GetSeatMap(ctx, request.Params.SearchId, request.Params.OfferId)
+	if errors.Is(err, flights.ErrInvalidRequest) {
+		return api.GetSeatMap400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
+	}
+	if errors.Is(err, flights.ErrNotFound) {
+		return api.GetSeatMap404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
+	}
+	if err != nil {
+		return api.GetSeatMap500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
+	}
+	return api.GetSeatMap200JSONResponse(mapAPISegmentSeatMaps(seatMap)), nil
+}
+
 func (s *HttpServer) GetSelectedOffer(
 	ctx context.Context,
 	request api.GetSelectedOfferRequestObject,
@@ -129,6 +146,35 @@ func mapAPIAdditionalFields(src []flights.AdditionalField) []api.AdditionalField
 			Required:     src[i].Required,
 			PerPassenger: src[i].PerPassenger,
 			Options:      options,
+		}
+	}
+	return result
+}
+
+func mapAPISegmentSeatMaps(src []flights.SegmentSeatMap) []api.SegmentSeatMap {
+	result := make([]api.SegmentSeatMap, len(src))
+	for i := range src {
+		seats := make([]api.SeatDetail, len(src[i].Seats))
+		for j := range src[i].Seats {
+			seats[j] = api.SeatDetail{
+				Code:                       src[i].Seats[j].Code,
+				Type:                       api.SeatType(src[i].Seats[j].Type),
+				SeatDescription:            src[i].Seats[j].SeatDescription,
+				Price:                      src[i].Seats[j].Price,
+				CurrencyCode:               src[i].Seats[j].CurrencyCode,
+				Row:                        int32(src[i].Seats[j].Row),
+				Col:                        int32(src[i].Seats[j].Col),
+				IsAvailable:                src[i].Seats[j].IsAvailable,
+				PersonsWithReducedMobility: src[i].Seats[j].PersonsWithReducedMobility,
+				NoInfantSeat:               src[i].Seats[j].NoInfantSeat,
+			}
+		}
+		result[i] = api.SegmentSeatMap{
+			SegmentId:    int32(src[i].SegmentID),
+			Origin:       src[i].Origin,
+			Destination:  src[i].Destination,
+			FlightNumber: src[i].FlightNumber,
+			Seats:        seats,
 		}
 	}
 	return result

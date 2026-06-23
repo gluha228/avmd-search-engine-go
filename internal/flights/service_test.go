@@ -232,6 +232,83 @@ func TestGetSelectedOfferConvertsOfferToDefaultCurrency(t *testing.T) {
 	}
 }
 
+func TestGetSelectedOfferCachesSeatMapFromProcessDetails(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1", session: FlightSearchSession{
+		Params:      SearchRequest{DepartureAirportCode: "KIV", ArrivalAirportCode: "OTP", DepartureDate: departure, AdultCount: 1},
+		TFRoutingID: "RID",
+		TFOffers: []Offer{
+			{
+				OfferID:      "TF-OUT1",
+				CurrencyCode: "EUR",
+				Price:        100,
+				OutboundFlight: Flight{Segments: []Segment{
+					{
+						SegmentID:            1,
+						DepartureAirportCode: "KIV",
+						ArrivalAirportCode:   "OTP",
+						FlightNumber:         "TF100",
+					},
+				}},
+			},
+		},
+	}}
+	isOptional := false
+	service := NewServiceWithBookingDependencies(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+		RoutingID: "RID",
+		RequiredParameters: []travelfusion.RequiredParameter{
+			{
+				Name:        "SeatOptions",
+				Type:        "custom",
+				DisplayText: "Please Select Seat Options: TF100-12A(|W@25.00EUR@A320),TF100-12B(|T|A@@)",
+				IsOptional:  &isOptional,
+			},
+		},
+	}}, store, nil, &fakeCurrencyConverter{result: 20}, "EUR", nil)
+
+	_, err := service.GetSelectedOffer(context.Background(), "search-1", "TF-OUT1")
+	if err != nil {
+		t.Fatalf("GetSelectedOffer returned error: %v", err)
+	}
+	seatMap := store.session.TFSeatMapByOfferID["TF-OUT1"]
+	if len(seatMap) != 1 || len(seatMap[0].Seats) != 2 {
+		t.Fatalf("expected cached seat map, got %+v", store.session.TFSeatMapByOfferID)
+	}
+	if seatMap[0].Seats[0].Code != "12A" || seatMap[0].Seats[0].Type != SeatTypeWindow || seatMap[0].Seats[0].Price == nil || *seatMap[0].Seats[0].Price != 20 {
+		t.Fatalf("unexpected parsed seat: %+v", seatMap[0].Seats[0])
+	}
+	if seatMap[0].Seats[1].IsAvailable {
+		t.Fatalf("expected T seat to be unavailable: %+v", seatMap[0].Seats[1])
+	}
+}
+
+func TestGetSeatMapReturnsCachedSeatMap(t *testing.T) {
+	store := &fakeSessionStore{session: FlightSearchSession{
+		TFSeatMapByOfferID: map[string][]SegmentSeatMap{
+			"TF-OUT1": {
+				{
+					SegmentID:    1,
+					Origin:       "KIV",
+					Destination:  "OTP",
+					FlightNumber: "TF100",
+					Seats: []SeatDetail{
+						{Code: "12A", Type: SeatTypeWindow, Row: 12, Col: 0, IsAvailable: true},
+					},
+				},
+			},
+		},
+	}}
+	service := NewServiceWithSessionStore(fakeTFClient{}, store, nil)
+
+	seatMap, err := service.GetSeatMap(context.Background(), "search-1", "TF-OUT1")
+	if err != nil {
+		t.Fatalf("GetSeatMap returned error: %v", err)
+	}
+	if len(seatMap) != 1 || seatMap[0].Seats[0].Code != "12A" {
+		t.Fatalf("unexpected seat map: %+v", seatMap)
+	}
+}
+
 func TestParseLuggageInnerExtractsTrailingPriceCurrency(t *testing.T) {
 	parsed, ok := parseLuggageInner("1 bags - 20Kg total - 25.00 EUR")
 	if !ok {

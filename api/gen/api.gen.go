@@ -18,6 +18,39 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for SeatType.
+const (
+	AISLE        SeatType = "AISLE"
+	CENTRE       SeatType = "CENTRE"
+	EXITROW      SeatType = "EXIT_ROW"
+	EXTRALEGROOM SeatType = "EXTRA_LEGROOM"
+	MIDDLE       SeatType = "MIDDLE"
+	STANDARD     SeatType = "STANDARD"
+	WINDOW       SeatType = "WINDOW"
+)
+
+// Valid indicates whether the value is a known member of the SeatType enum.
+func (e SeatType) Valid() bool {
+	switch e {
+	case AISLE:
+		return true
+	case CENTRE:
+		return true
+	case EXITROW:
+		return true
+	case EXTRALEGROOM:
+		return true
+	case MIDDLE:
+		return true
+	case STANDARD:
+		return true
+	case WINDOW:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LocaleHeaderParam.
 const (
 	En LocaleHeaderParam = "en"
@@ -207,6 +240,32 @@ type Offer struct {
 	Price          float64 `json:"price"`
 }
 
+// SeatDetail defines model for SeatDetail.
+type SeatDetail struct {
+	Code                       string   `json:"code"`
+	Col                        int32    `json:"col"`
+	CurrencyCode               *string  `json:"currency_code,omitempty"`
+	IsAvailable                bool     `json:"is_available"`
+	NoInfantSeat               bool     `json:"no_infant_seat"`
+	PersonsWithReducedMobility bool     `json:"persons_with_reduced_mobility"`
+	Price                      *float64 `json:"price,omitempty"`
+	Row                        int32    `json:"row"`
+	SeatDescription            *string  `json:"seat_description,omitempty"`
+	Type                       SeatType `json:"type"`
+}
+
+// SeatType defines model for SeatType.
+type SeatType string
+
+// SegmentSeatMap defines model for SegmentSeatMap.
+type SegmentSeatMap struct {
+	Destination  string       `json:"destination"`
+	FlightNumber string       `json:"flight_number"`
+	Origin       string       `json:"origin"`
+	Seats        []SeatDetail `json:"seats"`
+	SegmentId    int32        `json:"segment_id"`
+}
+
 // SelectedOffer defines model for SelectedOffer.
 type SelectedOffer struct {
 	AdditionalFields []AdditionalField  `json:"additional_fields"`
@@ -351,6 +410,15 @@ type GetAirportParams struct {
 
 // UpdateAirportParams defines parameters for UpdateAirport.
 type UpdateAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// GetSeatMapParams defines parameters for GetSeatMap.
+type GetSeatMapParams struct {
+	SearchId SearchIDParam `form:"searchId" json:"searchId"`
+	OfferId  OfferIDParam  `form:"offerId" json:"offerId"`
+
 	// AcceptLanguage Language preference (en, ro, ru)
 	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
@@ -513,6 +581,9 @@ type ServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams)
 
+	// (GET /api/v1/booking/seats)
+	GetSeatMap(w http.ResponseWriter, r *http.Request, params GetSeatMapParams)
+
 	// (GET /api/v1/booking/selected-offer)
 	GetSelectedOffer(w http.ResponseWriter, r *http.Request, params GetSelectedOfferParams)
 
@@ -582,6 +653,11 @@ func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDP
 
 // (PUT /api/v1/airports/{id})
 func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /api/v1/booking/seats)
+func (_ Unimplemented) GetSeatMap(w http.ResponseWriter, r *http.Request, params GetSeatMapParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -887,6 +963,73 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAirport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeatMap operation middleware
+func (siw *ServerInterfaceWrapper) GetSeatMap(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSeatMapParams
+
+	// ------------- Required query parameter "searchId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "searchId", r.URL.Query(), &params.SearchId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "searchId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "searchId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "offerId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "offerId", r.URL.Query(), &params.OfferId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offerId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offerId", Err: err})
+		}
+		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeatMap(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2095,6 +2238,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/api/v1/airports/{id}", wrapper.UpdateAirport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/booking/seats", wrapper.GetSeatMap)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/booking/selected-offer", wrapper.GetSelectedOffer)
 	})
 	r.Group(func(r chi.Router) {
@@ -2342,6 +2488,70 @@ func (response UpdateAirport404JSONResponse) VisitUpdateAirportResponse(w http.R
 type UpdateAirport500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeatMapRequestObject struct {
+	Params GetSeatMapParams
+}
+
+type GetSeatMapResponseObject interface {
+	VisitGetSeatMapResponse(w http.ResponseWriter) error
+}
+
+type GetSeatMap200JSONResponse []SegmentSeatMap
+
+func (response GetSeatMap200JSONResponse) VisitGetSeatMapResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeatMap400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetSeatMap400JSONResponse) VisitGetSeatMapResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeatMap404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSeatMap404JSONResponse) VisitGetSeatMapResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeatMap500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeatMap500JSONResponse) VisitGetSeatMapResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3028,6 +3238,9 @@ type StrictServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(ctx context.Context, request UpdateAirportRequestObject) (UpdateAirportResponseObject, error)
 
+	// (GET /api/v1/booking/seats)
+	GetSeatMap(ctx context.Context, request GetSeatMapRequestObject) (GetSeatMapResponseObject, error)
+
 	// (GET /api/v1/booking/selected-offer)
 	GetSelectedOffer(ctx context.Context, request GetSelectedOfferRequestObject) (GetSelectedOfferResponseObject, error)
 
@@ -3240,6 +3453,32 @@ func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAirportResponseObject); ok {
 		if err := validResponse.VisitUpdateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSeatMap operation middleware
+func (sh *strictHandler) GetSeatMap(w http.ResponseWriter, r *http.Request, params GetSeatMapParams) {
+	var request GetSeatMapRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeatMap(ctx, request.(GetSeatMapRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeatMap")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeatMapResponseObject); ok {
+		if err := validResponse.VisitGetSeatMapResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

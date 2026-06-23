@@ -93,6 +93,7 @@ type FlightSearchSession struct {
 	Params               SearchRequest                 `json:"params"`
 	TFRoutingID          string                        `json:"tf_routing_id"`
 	TFOffers             []Offer                       `json:"tf_offers"`
+	TFSeatMapByOfferID   map[string][]SegmentSeatMap   `json:"tf_seat_map_by_offer_id,omitempty"`
 	SelectedOfferID      string                        `json:"selected_offer_id,omitempty"`
 	TFRequiredParameters []TFRequiredParameterSnapshot `json:"tf_required_parameters,omitempty"`
 }
@@ -105,4 +106,25 @@ type TFRequiredParameterSnapshot struct {
 	IsOptional          *bool  `json:"is_optional,omitempty"`
 	IsSometimesRequired bool   `json:"is_sometimes_required"`
 	DisplayText         string `json:"display_text,omitempty"`
+}
+
+type SegmentSeatMap struct {
+	SegmentID    int
+	Origin       string
+	Destination  string
+	FlightNumber string
+	Seats        []SeatDetail
+}
+
+type SeatDetail struct {
+	Code                       string
+	Type                       string
+	SeatDescription            *string
+	Price                      *float64
+	CurrencyCode               *string
+	Row                        int
+	Col                        int
+	IsAvailable                bool
+	PersonsWithReducedMobility bool
+	NoInfantSeat               bool
 }

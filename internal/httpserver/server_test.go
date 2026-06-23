@@ -333,6 +333,52 @@ func TestGetSelectedOfferLocalizesLuggageAdditionalFields(t *testing.T) {
 	}
 }
 
+func TestGetSeatMapReturnsCachedSeats(t *testing.T) {
+	price := 20.0
+	currency := "EUR"
+	description := "Exit row"
+	store := &fakeSessionStore{session: flights.FlightSearchSession{
+		TFSeatMapByOfferID: map[string][]flights.SegmentSeatMap{
+			"TF-OUT1": {
+				{
+					SegmentID:    1,
+					Origin:       "KIV",
+					Destination:  "OTP",
+					FlightNumber: "TF100",
+					Seats: []flights.SeatDetail{
+						{
+							Code:            "12A",
+							Type:            flights.SeatTypeExitRow,
+							SeatDescription: &description,
+							Price:           &price,
+							CurrencyCode:    &currency,
+							Row:             12,
+							Col:             0,
+							IsAvailable:     true,
+						},
+					},
+				},
+			},
+		},
+	}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{}, store, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/seats?searchId=search-1&offerId=TF-OUT1", nil)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	for _, expected := range []string{`"segment_id":1`, `"code":"12A"`, `"type":"EXIT_ROW"`, `"price":20`, `"currency_code":"EUR"`} {
+		if !strings.Contains(recorder.Body.String(), expected) {
+			t.Fatalf("expected response to contain %q, got %s", expected, recorder.Body.String())
+		}
+	}
+}
+
 func TestGetCalendarReturnsCachedPrices(t *testing.T) {
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	calendarService := calendar.NewService(&fakeCalendarPriceStore{entries: map[string]calendar.PriceEntry{

@@ -225,6 +225,7 @@ func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string
 	required := normalizeRequiredParameters(details.RequiredParameters)
 	session.SelectedOfferID = offerID
 	session.TFRequiredParameters = required
+	s.cacheSeatMap(ctx, session, offerID, offer, required)
 	if err := s.sessionStore.Save(ctx, searchID, *session); err != nil {
 		return nil, fmt.Errorf("update selected offer session: %w", err)
 	}
@@ -238,6 +239,33 @@ func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string
 		SearchParams:     session.Params,
 		AdditionalFields: s.mapAdditionalFields(ctx, required),
 	}, nil
+}
+
+func (s *Service) GetSeatMap(ctx context.Context, searchID, offerID string) ([]SegmentSeatMap, error) {
+	if s.sessionStore == nil {
+		return nil, fmt.Errorf("%w: session store is not configured", ErrNotFound)
+	}
+	searchID = strings.TrimSpace(searchID)
+	offerID = strings.TrimSpace(offerID)
+	if searchID == "" {
+		return nil, fmt.Errorf("%w: searchId is required", ErrInvalidRequest)
+	}
+	if offerID == "" {
+		return nil, fmt.Errorf("%w: offerId is required", ErrInvalidRequest)
+	}
+
+	session, err := s.sessionStore.Get(ctx, searchID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: search session expired or not found for ID: %s", ErrNotFound, searchID)
+	}
+	if session.TFSeatMapByOfferID == nil {
+		return nil, fmt.Errorf("%w: TravelFusion seat map for offer %s not found in session %s", ErrNotFound, offerID, searchID)
+	}
+	seatMap, ok := session.TFSeatMapByOfferID[offerID]
+	if !ok {
+		return nil, fmt.Errorf("%w: TravelFusion seat map for offer %s not found in session %s", ErrNotFound, offerID, searchID)
+	}
+	return seatMap, nil
 }
 
 func (s *Service) Validate(req SearchRequest) error {

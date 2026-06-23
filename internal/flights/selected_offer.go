@@ -345,10 +345,6 @@ func (s *Service) luggageOptionPrice(ctx context.Context, amount float64, curren
 	return &AdditionalFieldOptionPrice{Amount: amount, CurrencyCode: currencyCode}
 }
 
-func hasSeatOptions(displayText string) bool {
-	return strings.TrimSpace(displayText) != ""
-}
-
 func isOptional(parameter TFRequiredParameterSnapshot) bool {
 	return boolValue(parameter.IsOptional)
 }
