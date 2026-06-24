@@ -148,6 +148,27 @@ func (c *Client) ProcessDetails(ctx context.Context, req ProcessDetailsRequest) 
 	return mapProcessDetails(resp.ProcessDetails), nil
 }
 
+func (c *Client) ProcessTerms(ctx context.Context, req ProcessTermsRequest) (*ProcessTermsResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	payload, err := buildProcessTermsXML(c.xmlLoginID, c.loginID, req)
+	if err != nil {
+		return nil, fmt.Errorf("build process terms request: %w", err)
+	}
+	body, err := c.postXML(ctx, "ProcessTerms", payload)
+	if err != nil {
+		return nil, fmt.Errorf("process terms: %w", err)
+	}
+
+	var resp commandListProcessTermsResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("parse process terms response: %w", err)
+	}
+	return mapProcessTerms(resp.ProcessTerms), nil
+}
+
 func (c *Client) GetBranchSupplierList(ctx context.Context) ([]string, error) {
 	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
 		return nil, ErrMissingCredentials

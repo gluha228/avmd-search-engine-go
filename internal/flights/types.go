@@ -42,6 +42,53 @@ type SelectedOffer struct {
 	AdditionalFields []AdditionalField
 }
 
+type PassengerDataRequest struct {
+	SearchID           string
+	OfferID            string
+	Passengers         []Passenger
+	ContactData        ContactData
+	SupplierParameters []SupplierParameter
+}
+
+type Passenger struct {
+	Title                  string
+	FirstName              string
+	LastName               string
+	DateOfBirth            time.Time
+	CitizenshipCountryCode string
+	SupplierParameters     []SupplierParameter
+}
+
+type ContactData struct {
+	Email string
+	Phone Phone
+}
+
+type Phone struct {
+	InternationalCode string
+	Number            string
+}
+
+type SupplierParameter struct {
+	ParamName  string
+	ParamValue string
+}
+
+type PassengerDataResponse struct {
+	RoutingID                           string
+	TFBookingReference                  string
+	FinalAmount                         *float64
+	FinalCurrency                       string
+	SupplierVisualAuthorisationImageURL string
+	SupplierResponses                   []ProcessTermsSupplierResponse
+}
+
+type ProcessTermsSupplierResponse struct {
+	Name string
+	Type string
+	Data string
+}
+
 type AdditionalField struct {
 	Code         string
 	Description  string

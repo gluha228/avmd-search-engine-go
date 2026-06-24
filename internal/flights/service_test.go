@@ -9,9 +9,11 @@ import (
 )
 
 type fakeTFClient struct {
-	result         *travelfusion.SearchResult
-	processDetails *travelfusion.ProcessDetailsResult
-	err            error
+	result           *travelfusion.SearchResult
+	processDetails   *travelfusion.ProcessDetailsResult
+	processTerms     *travelfusion.ProcessTermsResult
+	processTermsReqs *[]travelfusion.ProcessTermsRequest
+	err              error
 }
 
 type fakeSessionStore struct {
@@ -52,6 +54,13 @@ func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*trav
 
 func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
 	return f.processDetails, f.err
+}
+
+func (f fakeTFClient) ProcessTerms(_ context.Context, req travelfusion.ProcessTermsRequest) (*travelfusion.ProcessTermsResult, error) {
+	if f.processTermsReqs != nil {
+		*f.processTermsReqs = append(*f.processTermsReqs, req)
+	}
+	return f.processTerms, f.err
 }
 
 func (f *fakeSessionStore) Create(_ context.Context, session FlightSearchSession) (string, error) {
@@ -307,6 +316,116 @@ func TestGetSeatMapReturnsCachedSeatMap(t *testing.T) {
 	if len(seatMap) != 1 || seatMap[0].Seats[0].Code != "12A" {
 		t.Fatalf("unexpected seat map: %+v", seatMap)
 	}
+}
+
+func TestProcessPassengerDataBuildsProcessTermsRequest(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	processTermsReqs := []travelfusion.ProcessTermsRequest{}
+	store := &fakeSessionStore{session: FlightSearchSession{
+		Params: SearchRequest{
+			DepartureAirportCode: "KIV",
+			ArrivalAirportCode:   "OTP",
+			DepartureDate:        departure,
+			AdultCount:           1,
+		},
+		TFRoutingID:     "RID",
+		SelectedOfferID: "TF-OUT1",
+		TFOffers:        []Offer{{OfferID: "TF-OUT1"}},
+		TFRequiredParameters: []TFRequiredParameterSnapshot{
+			{Parameter: "PASSPORT_NUMBER", PerPassenger: boolTestPtr(true), IsOptional: boolTestPtr(false)},
+			{Parameter: "DATE_OF_BIRTH", PerPassenger: boolTestPtr(true), IsOptional: boolTestPtr(false)},
+			{Parameter: "SEAT_OPTIONS", PerPassenger: boolTestPtr(true), IsOptional: boolTestPtr(true)},
+		},
+	}}
+	finalAmount := 123.45
+	service := NewServiceWithSessionStore(fakeTFClient{
+		processTerms: &travelfusion.ProcessTermsResult{
+			RoutingID:          "RID",
+			TFBookingReference: "BOOK123",
+			FinalAmount:        &finalAmount,
+			FinalCurrency:      "EUR",
+		},
+		processTermsReqs: &processTermsReqs,
+	}, store, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	response, err := service.ProcessPassengerData(context.Background(), PassengerDataRequest{
+		SearchID: "search-1",
+		OfferID:  "TF-OUT1",
+		Passengers: []Passenger{
+			{
+				Title:                  "Mr",
+				FirstName:              "John",
+				LastName:               "Doe",
+				DateOfBirth:            time.Date(1990, 5, 10, 0, 0, 0, 0, time.UTC),
+				CitizenshipCountryCode: "US",
+				SupplierParameters: []SupplierParameter{
+					{ParamName: "PASSPORT_NUMBER", ParamValue: "A1234567"},
+					{ParamName: "SEAT_OPTIONS", ParamValue: "12A"},
+				},
+			},
+		},
+		ContactData: ContactData{
+			Email: "john@example.com",
+			Phone: Phone{InternationalCode: "+373", Number: "69123456"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ProcessPassengerData returned error: %v", err)
+	}
+	if response.TFBookingReference != "BOOK123" || response.FinalAmount == nil || *response.FinalAmount != 123.45 {
+		t.Fatalf("unexpected response: %+v", response)
+	}
+	if len(processTermsReqs) != 1 {
+		t.Fatalf("expected one ProcessTerms request, got %+v", processTermsReqs)
+	}
+	tfReq := processTermsReqs[0]
+	if tfReq.RoutingID != "RID" || tfReq.OutwardID != "OUT1" {
+		t.Fatalf("unexpected TF ids: %+v", tfReq)
+	}
+	if len(tfReq.BookingProfile.Travellers) != 1 || tfReq.BookingProfile.Travellers[0].Age != 36 {
+		t.Fatalf("unexpected travellers: %+v", tfReq.BookingProfile.Travellers)
+	}
+	if tfReq.BookingProfile.ContactDetails.Email != "john@example.com" || tfReq.BookingProfile.ContactDetails.MobilePhone.InternationalCode != "00373" {
+		t.Fatalf("unexpected contact details: %+v", tfReq.BookingProfile.ContactDetails)
+	}
+	if !hasCSP(tfReq.BookingProfile.CustomSupplierParameters, "UseTFPrepay", "Always") {
+		t.Fatalf("expected UseTFPrepay CSP, got %+v", tfReq.BookingProfile.CustomSupplierParameters)
+	}
+	passengerCSPs := tfReq.BookingProfile.Travellers[0].CustomSupplierParameters
+	if !hasCSP(passengerCSPs, "PassportNumber", "A1234567") || !hasCSP(passengerCSPs, "DateOfBirth", "10/05/1990") || !hasCSP(passengerCSPs, "SeatOptions", "12A") {
+		t.Fatalf("expected passenger CSPs, got %+v", passengerCSPs)
+	}
+}
+
+func TestProcessPassengerDataValidatesPassengerCount(t *testing.T) {
+	store := &fakeSessionStore{session: FlightSearchSession{
+		Params:      SearchRequest{AdultCount: 2},
+		TFRoutingID: "RID",
+		TFOffers:    []Offer{{OfferID: "TF-OUT1"}},
+	}}
+	service := NewServiceWithSessionStore(fakeTFClient{}, store, nil)
+
+	_, err := service.ProcessPassengerData(context.Background(), PassengerDataRequest{
+		SearchID: "search-1",
+		OfferID:  "TF-OUT1",
+	})
+	if !errors.Is(err, ErrInvalidRequest) {
+		t.Fatalf("expected ErrInvalidRequest, got %v", err)
+	}
+}
+
+func boolTestPtr(value bool) *bool {
+	return &value
+}
+
+func hasCSP(params []travelfusion.CustomSupplierParameter, name, value string) bool {
+	for _, param := range params {
+		if param.Name == name && param.Value == value {
+			return true
+		}
+	}
+	return false
 }
 
 func TestParseLuggageInnerExtractsTrailingPriceCurrency(t *testing.T) {

@@ -19,6 +19,7 @@ import (
 type fakeTFClient struct {
 	result         *travelfusion.SearchResult
 	processDetails *travelfusion.ProcessDetailsResult
+	processTerms   *travelfusion.ProcessTermsResult
 	err            error
 }
 
@@ -28,6 +29,10 @@ func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*trav
 
 func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
 	return f.processDetails, f.err
+}
+
+func (f fakeTFClient) ProcessTerms(context.Context, travelfusion.ProcessTermsRequest) (*travelfusion.ProcessTermsResult, error) {
+	return f.processTerms, f.err
 }
 
 type fakeSessionStore struct {
@@ -376,6 +381,64 @@ func TestGetSeatMapReturnsCachedSeats(t *testing.T) {
 		if !strings.Contains(recorder.Body.String(), expected) {
 			t.Fatalf("expected response to contain %q, got %s", expected, recorder.Body.String())
 		}
+	}
+}
+
+func TestSubmitPassengerDataReturnsProcessTermsResponse(t *testing.T) {
+	finalAmount := 222.5
+	sessionStore := &fakeSessionStore{session: flights.FlightSearchSession{
+		Params:          flights.SearchRequest{AdultCount: 1},
+		TFRoutingID:     "RID",
+		SelectedOfferID: "TF-OUT1",
+		TFOffers:        []flights.Offer{{OfferID: "TF-OUT1"}},
+	}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{
+		processTerms: &travelfusion.ProcessTermsResult{
+			RoutingID:          "RID",
+			TFBookingReference: "BOOK123",
+			FinalAmount:        &finalAmount,
+			FinalCurrency:      "EUR",
+			SupplierResponses: []travelfusion.SupplierResponse{
+				{Name: "prebooking", Type: "html", Data: "<p>ok</p>"},
+			},
+		},
+	}, sessionStore, nil)
+
+	body := `{
+		"search_id":"search-1",
+		"offer_id":"TF-OUT1",
+		"passengers":[{
+			"title":"Mr",
+			"first_name":"John",
+			"last_name":"Doe",
+			"date_of_birth":"1990-05-10",
+			"citizenship_country_code":"US"
+		}],
+		"contact_data":{
+			"email":"john@example.com",
+			"phone":{"international_code":"+373","number":"69123456"}
+		}
+	}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/booking/passenger-data", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var response map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response["tf_booking_reference"] != "BOOK123" || response["final_currency"] != "EUR" {
+		t.Fatalf("unexpected response: %v", response)
+	}
+	supplierResponses, ok := response["supplier_responses"].([]any)
+	if !ok || len(supplierResponses) != 1 {
+		t.Fatalf("expected supplier response, got %v", response["supplier_responses"])
 	}
 }
 

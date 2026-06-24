@@ -10,6 +10,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+func (s *HttpServer) SubmitPassengerData(
+	ctx context.Context,
+	request api.SubmitPassengerDataRequestObject,
+) (api.SubmitPassengerDataResponseObject, error) {
+	if request.Body == nil {
+		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: "request body is required"}}, nil
+	}
+	serviceReq := mapPassengerDataRequest(*request.Body)
+	response, err := s.flightService.ProcessPassengerData(ctx, serviceReq)
+	if errors.Is(err, flights.ErrInvalidRequest) {
+		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
+	}
+	if errors.Is(err, flights.ErrNotFound) {
+		return api.SubmitPassengerData404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
+	}
+	if err != nil {
+		return api.SubmitPassengerData500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
+	}
+	return api.SubmitPassengerData200JSONResponse(mapPassengerDataResponse(*response)), nil
+}
+
 func (s *HttpServer) GetSeatMap(
 	ctx context.Context,
 	request api.GetSeatMapRequestObject,
@@ -25,6 +46,66 @@ func (s *HttpServer) GetSeatMap(
 		return api.GetSeatMap500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
 	}
 	return api.GetSeatMap200JSONResponse(mapAPISegmentSeatMaps(seatMap)), nil
+}
+
+func mapPassengerDataRequest(src api.PassengerDataRequest) flights.PassengerDataRequest {
+	passengers := make([]flights.Passenger, len(src.Passengers))
+	for i := range src.Passengers {
+		passengers[i] = flights.Passenger{
+			Title:                  string(src.Passengers[i].Title),
+			FirstName:              src.Passengers[i].FirstName,
+			LastName:               src.Passengers[i].LastName,
+			DateOfBirth:            src.Passengers[i].DateOfBirth.Time,
+			CitizenshipCountryCode: src.Passengers[i].CitizenshipCountryCode,
+			SupplierParameters:     mapSupplierParameters(src.Passengers[i].SupplierParameters),
+		}
+	}
+	return flights.PassengerDataRequest{
+		SearchID:   src.SearchId,
+		OfferID:    src.OfferId,
+		Passengers: passengers,
+		ContactData: flights.ContactData{
+			Email: string(src.ContactData.Email),
+			Phone: flights.Phone{
+				InternationalCode: src.ContactData.Phone.InternationalCode,
+				Number:            src.ContactData.Phone.Number,
+			},
+		},
+		SupplierParameters: mapSupplierParameters(src.SupplierParameters),
+	}
+}
+
+func mapSupplierParameters(src *[]api.CustomSupplierParameter) []flights.SupplierParameter {
+	if src == nil {
+		return nil
+	}
+	result := make([]flights.SupplierParameter, len(*src))
+	for i := range *src {
+		result[i] = flights.SupplierParameter{
+			ParamName:  (*src)[i].ParamName,
+			ParamValue: (*src)[i].ParamValue,
+		}
+	}
+	return result
+}
+
+func mapPassengerDataResponse(src flights.PassengerDataResponse) api.PassengerDataResponse {
+	responses := make([]api.ProcessTermsSupplierResponse, len(src.SupplierResponses))
+	for i := range src.SupplierResponses {
+		responses[i] = api.ProcessTermsSupplierResponse{
+			Name: stringPtr(src.SupplierResponses[i].Name),
+			Type: stringPtr(src.SupplierResponses[i].Type),
+			Data: stringPtr(src.SupplierResponses[i].Data),
+		}
+	}
+	return api.PassengerDataResponse{
+		RoutingId:                           stringPtr(src.RoutingID),
+		TfBookingReference:                  stringPtr(src.TFBookingReference),
+		FinalAmount:                         src.FinalAmount,
+		FinalCurrency:                       stringPtr(src.FinalCurrency),
+		SupplierVisualAuthorisationImageUrl: stringPtr(src.SupplierVisualAuthorisationImageURL),
+		SupplierResponses:                   responses,
+	}
 }
 
 func (s *HttpServer) GetSelectedOffer(

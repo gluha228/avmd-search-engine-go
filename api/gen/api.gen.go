@@ -18,6 +18,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for PassengerDataPassengerTitle.
+const (
+	Miss PassengerDataPassengerTitle = "Miss"
+	Mr   PassengerDataPassengerTitle = "Mr"
+	Mrs  PassengerDataPassengerTitle = "Mrs"
+)
+
+// Valid indicates whether the value is a known member of the PassengerDataPassengerTitle enum.
+func (e PassengerDataPassengerTitle) Valid() bool {
+	switch e {
+	case Miss:
+		return true
+	case Mr:
+		return true
+	case Mrs:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SeatType.
 const (
 	AISLE        SeatType = "AISLE"
@@ -169,6 +190,12 @@ type CountryRequest struct {
 	NameRu string `json:"name_ru"`
 }
 
+// CustomSupplierParameter defines model for CustomSupplierParameter.
+type CustomSupplierParameter struct {
+	ParamName  string `json:"param_name"`
+	ParamValue string `json:"param_value"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Message string `json:"message"`
@@ -238,6 +265,57 @@ type Offer struct {
 	OfferId        string  `json:"offer_id"`
 	OutboundFlight Flight  `json:"outbound_flight"`
 	Price          float64 `json:"price"`
+}
+
+// PassengerContactData defines model for PassengerContactData.
+type PassengerContactData struct {
+	Email openapi_types.Email `json:"email"`
+	Phone PassengerPhone      `json:"phone"`
+}
+
+// PassengerDataPassenger defines model for PassengerDataPassenger.
+type PassengerDataPassenger struct {
+	CitizenshipCountryCode string                      `json:"citizenship_country_code"`
+	DateOfBirth            openapi_types.Date          `json:"date_of_birth"`
+	FirstName              string                      `json:"first_name"`
+	LastName               string                      `json:"last_name"`
+	SupplierParameters     *[]CustomSupplierParameter  `json:"supplier_parameters,omitempty"`
+	Title                  PassengerDataPassengerTitle `json:"title"`
+}
+
+// PassengerDataPassengerTitle defines model for PassengerDataPassenger.Title.
+type PassengerDataPassengerTitle string
+
+// PassengerDataRequest defines model for PassengerDataRequest.
+type PassengerDataRequest struct {
+	ContactData        PassengerContactData       `json:"contact_data"`
+	OfferId            string                     `json:"offer_id"`
+	Passengers         []PassengerDataPassenger   `json:"passengers"`
+	SearchId           string                     `json:"search_id"`
+	SupplierParameters *[]CustomSupplierParameter `json:"supplier_parameters,omitempty"`
+}
+
+// PassengerDataResponse defines model for PassengerDataResponse.
+type PassengerDataResponse struct {
+	FinalAmount                         *float64                       `json:"final_amount,omitempty"`
+	FinalCurrency                       *string                        `json:"final_currency,omitempty"`
+	RoutingId                           *string                        `json:"routing_id,omitempty"`
+	SupplierResponses                   []ProcessTermsSupplierResponse `json:"supplier_responses"`
+	SupplierVisualAuthorisationImageUrl *string                        `json:"supplier_visual_authorisation_image_url,omitempty"`
+	TfBookingReference                  *string                        `json:"tf_booking_reference,omitempty"`
+}
+
+// PassengerPhone defines model for PassengerPhone.
+type PassengerPhone struct {
+	InternationalCode string `json:"international_code"`
+	Number            string `json:"number"`
+}
+
+// ProcessTermsSupplierResponse defines model for ProcessTermsSupplierResponse.
+type ProcessTermsSupplierResponse struct {
+	Data *string `json:"data,omitempty"`
+	Name *string `json:"name,omitempty"`
+	Type *string `json:"type,omitempty"`
 }
 
 // SeatDetail defines model for SeatDetail.
@@ -414,6 +492,12 @@ type UpdateAirportParams struct {
 	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
 
+// SubmitPassengerDataParams defines parameters for SubmitPassengerData.
+type SubmitPassengerDataParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
 // GetSeatMapParams defines parameters for GetSeatMap.
 type GetSeatMapParams struct {
 	SearchId SearchIDParam `form:"searchId" json:"searchId"`
@@ -551,6 +635,9 @@ type CreateAirportJSONRequestBody = AirportRequest
 // UpdateAirportJSONRequestBody defines body for UpdateAirport for application/json ContentType.
 type UpdateAirportJSONRequestBody = AirportRequest
 
+// SubmitPassengerDataJSONRequestBody defines body for SubmitPassengerData for application/json ContentType.
+type SubmitPassengerDataJSONRequestBody = PassengerDataRequest
+
 // CreateCityJSONRequestBody defines body for CreateCity for application/json ContentType.
 type CreateCityJSONRequestBody = CityRequest
 
@@ -580,6 +667,9 @@ type ServerInterface interface {
 
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams)
+
+	// (POST /api/v1/booking/passenger-data)
+	SubmitPassengerData(w http.ResponseWriter, r *http.Request, params SubmitPassengerDataParams)
 
 	// (GET /api/v1/booking/seats)
 	GetSeatMap(w http.ResponseWriter, r *http.Request, params GetSeatMapParams)
@@ -653,6 +743,11 @@ func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDP
 
 // (PUT /api/v1/airports/{id})
 func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /api/v1/booking/passenger-data)
+func (_ Unimplemented) SubmitPassengerData(w http.ResponseWriter, r *http.Request, params SubmitPassengerDataParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -963,6 +1058,47 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAirport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitPassengerData operation middleware
+func (siw *ServerInterfaceWrapper) SubmitPassengerData(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubmitPassengerDataParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitPassengerData(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2238,6 +2374,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/api/v1/airports/{id}", wrapper.UpdateAirport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/booking/passenger-data", wrapper.SubmitPassengerData)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/booking/seats", wrapper.GetSeatMap)
 	})
 	r.Group(func(r chi.Router) {
@@ -2488,6 +2627,71 @@ func (response UpdateAirport404JSONResponse) VisitUpdateAirportResponse(w http.R
 type UpdateAirport500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitPassengerDataRequestObject struct {
+	Params SubmitPassengerDataParams
+	Body   *SubmitPassengerDataJSONRequestBody
+}
+
+type SubmitPassengerDataResponseObject interface {
+	VisitSubmitPassengerDataResponse(w http.ResponseWriter) error
+}
+
+type SubmitPassengerData200JSONResponse PassengerDataResponse
+
+func (response SubmitPassengerData200JSONResponse) VisitSubmitPassengerDataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitPassengerData400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SubmitPassengerData400JSONResponse) VisitSubmitPassengerDataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitPassengerData404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SubmitPassengerData404JSONResponse) VisitSubmitPassengerDataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitPassengerData500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SubmitPassengerData500JSONResponse) VisitSubmitPassengerDataResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3238,6 +3442,9 @@ type StrictServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(ctx context.Context, request UpdateAirportRequestObject) (UpdateAirportResponseObject, error)
 
+	// (POST /api/v1/booking/passenger-data)
+	SubmitPassengerData(ctx context.Context, request SubmitPassengerDataRequestObject) (SubmitPassengerDataResponseObject, error)
+
 	// (GET /api/v1/booking/seats)
 	GetSeatMap(ctx context.Context, request GetSeatMapRequestObject) (GetSeatMapResponseObject, error)
 
@@ -3453,6 +3660,39 @@ func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAirportResponseObject); ok {
 		if err := validResponse.VisitUpdateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitPassengerData operation middleware
+func (sh *strictHandler) SubmitPassengerData(w http.ResponseWriter, r *http.Request, params SubmitPassengerDataParams) {
+	var request SubmitPassengerDataRequestObject
+
+	request.Params = params
+
+	var body SubmitPassengerDataJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitPassengerData(ctx, request.(SubmitPassengerDataRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitPassengerData")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitPassengerDataResponseObject); ok {
+		if err := validResponse.VisitSubmitPassengerDataResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

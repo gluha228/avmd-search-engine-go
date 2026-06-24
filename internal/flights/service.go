@@ -21,6 +21,7 @@ var (
 type TravelfusionClient interface {
 	Search(ctx context.Context, req travelfusion.SearchRequest) (*travelfusion.SearchResult, error)
 	ProcessDetails(ctx context.Context, req travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error)
+	ProcessTerms(ctx context.Context, req travelfusion.ProcessTermsRequest) (*travelfusion.ProcessTermsResult, error)
 }
 
 type SessionStore interface {

@@ -41,6 +41,70 @@ type ProcessDetailsResult struct {
 	RequiredParameters []RequiredParameter
 }
 
+type ProcessTermsRequest struct {
+	RoutingID      string
+	OutwardID      string
+	ReturnID       string
+	BookingProfile BookingProfile
+}
+
+type BookingProfile struct {
+	Travellers               []Traveller
+	ContactDetails           ContactDetails
+	CustomSupplierParameters []CustomSupplierParameter
+}
+
+type Traveller struct {
+	Age                      int
+	Name                     Name
+	CustomSupplierParameters []CustomSupplierParameter
+}
+
+type Name struct {
+	Title     string
+	NameParts []string
+}
+
+type ContactDetails struct {
+	Name        Name
+	Address     Address
+	MobilePhone Phone
+	Email       string
+}
+
+type Address struct {
+	City        string
+	Street      string
+	CountryCode string
+	Postcode    string
+	Province    string
+}
+
+type Phone struct {
+	InternationalCode string
+	Number            string
+}
+
+type CustomSupplierParameter struct {
+	Name  string
+	Value string
+}
+
+type ProcessTermsResult struct {
+	RoutingID                           string
+	TFBookingReference                  string
+	FinalAmount                         *float64
+	FinalCurrency                       string
+	SupplierVisualAuthorisationImageURL string
+	SupplierResponses                   []SupplierResponse
+}
+
+type SupplierResponse struct {
+	Name string
+	Type string
+	Data string
+}
+
 type RequiredParameter struct {
 	Name                string
 	Value               string
