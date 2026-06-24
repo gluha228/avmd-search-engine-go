@@ -255,6 +255,7 @@ func mapFlight(src travelfusion.Flight) session.Flight {
 		})
 	}
 	return session.Flight{
+		GroupID:              src.GroupID,
 		DepartureAirportCode: src.Origin,
 		ArrivalAirportCode:   src.Destination,
 		SeatsAvailable:       9,

@@ -297,6 +297,7 @@ func TestExtractFlights(t *testing.T) {
         <Complete>true</Complete>
         <GroupList>
           <Group>
+            <Id>GROUP1</Id>
             <Price>
               <Amount>120.50</Amount>
               <Currency>EUR</Currency>
@@ -342,6 +343,9 @@ func TestExtractFlights(t *testing.T) {
 	}
 	if outward[0].ID != "OUT1" || outward[0].Origin != "KIV" || outward[0].Destination != "OTP" {
 		t.Fatalf("unexpected outward flight: %+v", outward[0])
+	}
+	if outward[0].GroupID != "GROUP1" {
+		t.Fatalf("unexpected group ID: %+v", outward[0])
 	}
 	if outward[0].Price != 120.50 || outward[0].Currency != "EUR" {
 		t.Fatalf("unexpected price: %+v", outward[0])

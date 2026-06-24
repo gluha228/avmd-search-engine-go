@@ -1010,8 +1010,8 @@ func TestSearchRoundTripBuildsCheapestPair(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Search returned error: %v", err)
 	}
-	if len(resp.Offers) != 2 {
-		t.Fatalf("expected 2 offers, got %d: %+v", len(resp.Offers), resp.Offers)
+	if len(resp.Offers) != 4 {
+		t.Fatalf("expected 4 offers, got %d: %+v", len(resp.Offers), resp.Offers)
 	}
 	if resp.Offers[0].OfferID != "TF-OUT2-RET2" || resp.Offers[0].Price != 150 {
 		t.Fatalf("expected cheapest pair first, got %+v", resp.Offers[0])
@@ -1037,6 +1037,7 @@ func tfFlight(id, origin, destination string, departure time.Time, price float64
 	arrival := departure.Add(90 * time.Minute)
 	return travelfusion.Flight{
 		ID:            id,
+		GroupID:       "G1",
 		Origin:        origin,
 		Destination:   destination,
 		DepartureTime: departure,

@@ -10,6 +10,7 @@ const tfTimeLayout = "02/01/2006-15:04"
 
 type Flight struct {
 	ID                 string
+	GroupID            string
 	Origin             string
 	Destination        string
 	DepartureTime      time.Time

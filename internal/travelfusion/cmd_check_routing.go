@@ -132,17 +132,17 @@ func extractFlights(resp checkRoutingResponse) ([]Flight, []Flight) {
 		groups = append(groups, router.Groups...)
 		for _, group := range groups {
 			for _, flight := range group.OutwardList {
-				outward = append(outward, convertFlight(flight, group.Price, len(group.ReturnList) > 0, false))
+				outward = append(outward, convertFlight(flight, group.ID, group.Price, len(group.ReturnList) > 0, false))
 			}
 			for _, flight := range group.ReturnList {
-				returns = append(returns, convertFlight(flight, group.Price, true, true))
+				returns = append(returns, convertFlight(flight, group.ID, group.Price, true, true))
 			}
 		}
 	}
 	return outward, returns
 }
 
-func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn bool) Flight {
+func convertFlight(src xmlFlight, groupID string, groupPrice price, hasReturn bool, isReturn bool) Flight {
 	segments := make([]Segment, 0, len(src.SegmentList))
 	for _, segment := range src.SegmentList {
 		segments = append(segments, Segment{
@@ -196,6 +196,7 @@ func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn boo
 
 	return Flight{
 		ID:                 strings.TrimSpace(src.ID),
+		GroupID:            strings.TrimSpace(groupID),
 		Origin:             origin,
 		Destination:        destination,
 		DepartureTime:      departureTime,

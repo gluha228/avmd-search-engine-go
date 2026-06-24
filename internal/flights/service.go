@@ -817,24 +817,26 @@ func buildOffers(outwardFlights, returnFlights []travelfusion.Flight, roundTrip 
 		return offers
 	}
 
-	count := len(outwardFlights)
-	if len(returnFlights) < count {
-		count = len(returnFlights)
-	}
-	offers := make([]Offer, 0, count)
-	for i := 0; i < count; i++ {
-		inbound := returnFlights[i]
-		offers = append(offers, buildOffer(outwardFlights[i], &inbound))
-	}
-	if len(outwardFlights) > 0 && len(returnFlights) > 0 {
-		cheapestOutward := cheapestFlight(outwardFlights)
-		cheapestReturn := cheapestFlight(returnFlights)
-		cheapest := buildOffer(cheapestOutward, &cheapestReturn)
-		if !containsOffer(offers, cheapest.OfferID) {
-			offers = append(offers, cheapest)
+	returnsByGroupID := flightsByGroupID(returnFlights)
+	offers := make([]Offer, 0, len(outwardFlights))
+	for _, outward := range outwardFlights {
+		for _, inbound := range returnsByGroupID[outward.GroupID] {
+			offers = append(offers, buildOffer(outward, &inbound))
 		}
 	}
 	return offers
+}
+
+func flightsByGroupID(flights []travelfusion.Flight) map[string][]travelfusion.Flight {
+	result := make(map[string][]travelfusion.Flight)
+	for _, flight := range flights {
+		groupID := strings.TrimSpace(flight.GroupID)
+		if groupID == "" {
+			continue
+		}
+		result[groupID] = append(result[groupID], flight)
+	}
+	return result
 }
 
 func buildOffer(outward travelfusion.Flight, inbound *travelfusion.Flight) Offer {
@@ -1027,6 +1029,7 @@ func mapFlight(src travelfusion.Flight) Flight {
 		})
 	}
 	return Flight{
+		GroupID:              src.GroupID,
 		DepartureAirportCode: src.Origin,
 		ArrivalAirportCode:   src.Destination,
 		SeatsAvailable:       9,
@@ -1040,25 +1043,6 @@ func mapOperator(src travelfusion.Operator) Operator {
 		Name: src.Name,
 		Code: src.Code,
 	}
-}
-
-func cheapestFlight(flights []travelfusion.Flight) travelfusion.Flight {
-	cheapest := flights[0]
-	for _, flight := range flights[1:] {
-		if flight.Price < cheapest.Price {
-			cheapest = flight
-		}
-	}
-	return cheapest
-}
-
-func containsOffer(offers []Offer, offerID string) bool {
-	for _, offer := range offers {
-		if offer.OfferID == offerID {
-			return true
-		}
-	}
-	return false
 }
 
 func offerID(outward travelfusion.Flight, inbound *travelfusion.Flight) string {

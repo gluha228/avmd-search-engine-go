@@ -148,6 +148,7 @@ type FareBand struct {
 }
 
 type Flight struct {
+	GroupID              string
 	DepartureAirportCode string
 	ArrivalAirportCode   string
 	SeatsAvailable       int
