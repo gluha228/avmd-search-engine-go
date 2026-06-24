@@ -1,7 +1,6 @@
 package session
 
 import (
-	"avmd-search-engine-go/internal/flights"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,7 +27,7 @@ func NewRedisStore(client *redis.Client, ttl time.Duration, logger *slog.Logger)
 	}
 }
 
-func (s *RedisStore) Create(ctx context.Context, session flights.FlightSearchSession) (string, error) {
+func (s *RedisStore) Create(ctx context.Context, session FlightSearchSession) (string, error) {
 	searchID := uuid.NewString()
 	if err := s.Save(ctx, searchID, session); err != nil {
 		return "", err
@@ -39,7 +38,7 @@ func (s *RedisStore) Create(ctx context.Context, session flights.FlightSearchSes
 	return searchID, nil
 }
 
-func (s *RedisStore) Save(ctx context.Context, searchID string, session flights.FlightSearchSession) error {
+func (s *RedisStore) Save(ctx context.Context, searchID string, session FlightSearchSession) error {
 	payload, err := json.Marshal(session)
 	if err != nil {
 		return fmt.Errorf("marshal flight search session: %w", err)
@@ -50,12 +49,12 @@ func (s *RedisStore) Save(ctx context.Context, searchID string, session flights.
 	return nil
 }
 
-func (s *RedisStore) Get(ctx context.Context, searchID string) (*flights.FlightSearchSession, error) {
+func (s *RedisStore) Get(ctx context.Context, searchID string) (*FlightSearchSession, error) {
 	payload, err := s.client.Get(ctx, keyPrefix+searchID).Bytes()
 	if err != nil {
 		return nil, fmt.Errorf("get flight search session from redis: %w", err)
 	}
-	var session flights.FlightSearchSession
+	var session FlightSearchSession
 	if err := json.Unmarshal(payload, &session); err != nil {
 		return nil, fmt.Errorf("unmarshal flight search session: %w", err)
 	}

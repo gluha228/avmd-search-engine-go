@@ -2,7 +2,8 @@ package httpserver
 
 import (
 	api "avmd-search-engine-go/api/gen"
-	"avmd-search-engine-go/internal/flights"
+	flightsearch "avmd-search-engine-go/internal/flights/search"
+	flightsession "avmd-search-engine-go/internal/flights/session"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,7 +25,7 @@ func (s *HttpServer) SearchFlights(
 		return api.SearchFlights400JSONResponse{Message: err.Error()}, nil
 	}
 
-	if err := s.flightService.Validate(serviceReq); errors.Is(err, flights.ErrInvalidRequest) {
+	if err := s.searchService.Validate(serviceReq); errors.Is(err, flightsearch.ErrInvalidRequest) {
 		return api.SearchFlights400JSONResponse{Message: err.Error()}, nil
 	} else if err != nil {
 		return api.SearchFlights500JSONResponse{Message: err.Error()}, nil
@@ -32,13 +33,13 @@ func (s *HttpServer) SearchFlights(
 
 	return searchFlightsSSEResponse{
 		ctx:     ctx,
-		service: s.flightService,
+		service: s.searchService,
 		request: serviceReq,
 	}, nil
 }
 
-func mapSearchRequest(params api.SearchFlightsParams) (flights.SearchRequest, error) {
-	req := flights.SearchRequest{
+func mapSearchRequest(params api.SearchFlightsParams) (flightsearch.SearchRequest, error) {
+	req := flightsearch.SearchRequest{
 		DepartureAirportCode:                params.DepartureAirportCode,
 		ArrivalAirportCode:                  params.ArrivalAirportCode,
 		DepartureDate:                       params.DepartureDate.Time,
@@ -63,28 +64,28 @@ func mapSearchRequest(params api.SearchFlightsParams) (flights.SearchRequest, er
 
 	var err error
 	if req.DepartureOutboundFrom, err = parseOptionalClock(params.DepartureOutboundFrom); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("departureOutboundFrom: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("departureOutboundFrom: %w", err)
 	}
 	if req.DepartureOutboundTo, err = parseOptionalClock(params.DepartureOutboundTo); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("departureOutboundTo: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("departureOutboundTo: %w", err)
 	}
 	if req.ArrivalOutboundFrom, err = parseOptionalClock(params.ArrivalOutboundFrom); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("arrivalOutboundFrom: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("arrivalOutboundFrom: %w", err)
 	}
 	if req.ArrivalOutboundTo, err = parseOptionalClock(params.ArrivalOutboundTo); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("arrivalOutboundTo: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("arrivalOutboundTo: %w", err)
 	}
 	if req.DepartureInboundFrom, err = parseOptionalClock(params.DepartureInboundFrom); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("departureInboundFrom: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("departureInboundFrom: %w", err)
 	}
 	if req.DepartureInboundTo, err = parseOptionalClock(params.DepartureInboundTo); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("departureInboundTo: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("departureInboundTo: %w", err)
 	}
 	if req.ArrivalInboundFrom, err = parseOptionalClock(params.ArrivalInboundFrom); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("arrivalInboundFrom: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("arrivalInboundFrom: %w", err)
 	}
 	if req.ArrivalInboundTo, err = parseOptionalClock(params.ArrivalInboundTo); err != nil {
-		return flights.SearchRequest{}, fmt.Errorf("arrivalInboundTo: %w", err)
+		return flightsearch.SearchRequest{}, fmt.Errorf("arrivalInboundTo: %w", err)
 	}
 	return req, nil
 }
@@ -124,8 +125,8 @@ func floatPtr(value *float64) *float64 {
 
 type searchFlightsSSEResponse struct {
 	ctx     context.Context
-	service *flights.Service
-	request flights.SearchRequest
+	service *flightsearch.Service
+	request flightsearch.SearchRequest
 }
 
 func (response searchFlightsSSEResponse) VisitSearchFlightsResponse(w http.ResponseWriter) error {
@@ -246,7 +247,7 @@ type sseFlightAirport struct {
 	CityName string `json:"city_name"`
 }
 
-func mapOffers(src []flights.EnrichedOffer) []sseOffer {
+func mapOffers(src []flightsearch.EnrichedOffer) []sseOffer {
 	offers := make([]sseOffer, len(src))
 	for i := range src {
 		offers[i] = sseOffer{
@@ -265,7 +266,7 @@ func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 	return offers
 }
 
-func mapSSEPassengerPrices(src flights.PassengerPrices) ssePassengerPrices {
+func mapSSEPassengerPrices(src flightsession.PassengerPrices) ssePassengerPrices {
 	return ssePassengerPrices{
 		Adults:   nonNilSSEFloatList(src.Adults),
 		Children: nonNilSSEFloatList(src.Children),
@@ -280,7 +281,7 @@ func nonNilSSEFloatList(values []float64) []float64 {
 	return values
 }
 
-func mapSSEFareBand(src flights.FareBand) sseFareBand {
+func mapSSEFareBand(src flightsession.FareBand) sseFareBand {
 	features := src.Features
 	if features == nil {
 		features = []string{}
@@ -291,7 +292,7 @@ func mapSSEFareBand(src flights.FareBand) sseFareBand {
 	}
 }
 
-func mapFlight(src flights.EnrichedFlight) sseFlight {
+func mapFlight(src flightsession.EnrichedFlight) sseFlight {
 	segments := make([]sseSegment, len(src.Segments))
 	for i := range src.Segments {
 		segments[i] = sseSegment{
@@ -313,14 +314,14 @@ func mapFlight(src flights.EnrichedFlight) sseFlight {
 	}
 }
 
-func mapSSEFlightAirport(src flights.FlightAirport) sseFlightAirport {
+func mapSSEFlightAirport(src flightsession.FlightAirport) sseFlightAirport {
 	return sseFlightAirport{
 		Code:     src.Code,
 		CityName: src.CityName,
 	}
 }
 
-func mapSSEOperator(src flights.EnrichedOperator) *sseOperator {
+func mapSSEOperator(src flightsession.EnrichedOperator) *sseOperator {
 	if src.Name == "" && src.Code == "" && src.Logo == "" {
 		return nil
 	}

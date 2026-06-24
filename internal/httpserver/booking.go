@@ -2,7 +2,8 @@ package httpserver
 
 import (
 	api "avmd-search-engine-go/api/gen"
-	"avmd-search-engine-go/internal/flights"
+	flightbooking "avmd-search-engine-go/internal/flights/booking"
+	flightsession "avmd-search-engine-go/internal/flights/session"
 	"context"
 	"errors"
 	"time"
@@ -18,11 +19,11 @@ func (s *HttpServer) SubmitPassengerData(
 		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: "request body is required"}}, nil
 	}
 	serviceReq := mapPassengerDataRequest(*request.Body)
-	response, err := s.flightService.ProcessPassengerData(ctx, serviceReq)
-	if errors.Is(err, flights.ErrInvalidRequest) {
+	response, err := s.bookingService.ProcessPassengerData(ctx, serviceReq)
+	if errors.Is(err, flightbooking.ErrInvalidRequest) {
 		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
-	if errors.Is(err, flights.ErrNotFound) {
+	if errors.Is(err, flightbooking.ErrNotFound) {
 		return api.SubmitPassengerData404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
 	}
 	if err != nil {
@@ -35,11 +36,11 @@ func (s *HttpServer) GetSeatMap(
 	ctx context.Context,
 	request api.GetSeatMapRequestObject,
 ) (api.GetSeatMapResponseObject, error) {
-	seatMap, err := s.flightService.GetSeatMap(ctx, request.Params.SearchId, request.Params.OfferId)
-	if errors.Is(err, flights.ErrInvalidRequest) {
+	seatMap, err := s.bookingService.GetSeatMap(ctx, request.Params.SearchId, request.Params.OfferId)
+	if errors.Is(err, flightbooking.ErrInvalidRequest) {
 		return api.GetSeatMap400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
-	if errors.Is(err, flights.ErrNotFound) {
+	if errors.Is(err, flightbooking.ErrNotFound) {
 		return api.GetSeatMap404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
 	}
 	if err != nil {
@@ -48,10 +49,10 @@ func (s *HttpServer) GetSeatMap(
 	return api.GetSeatMap200JSONResponse(mapAPISegmentSeatMaps(seatMap)), nil
 }
 
-func mapPassengerDataRequest(src api.PassengerDataRequest) flights.PassengerDataRequest {
-	passengers := make([]flights.Passenger, len(src.Passengers))
+func mapPassengerDataRequest(src api.PassengerDataRequest) flightbooking.PassengerDataRequest {
+	passengers := make([]flightsession.Passenger, len(src.Passengers))
 	for i := range src.Passengers {
-		passengers[i] = flights.Passenger{
+		passengers[i] = flightsession.Passenger{
 			Title:                  string(src.Passengers[i].Title),
 			FirstName:              src.Passengers[i].FirstName,
 			LastName:               src.Passengers[i].LastName,
@@ -60,13 +61,13 @@ func mapPassengerDataRequest(src api.PassengerDataRequest) flights.PassengerData
 			SupplierParameters:     mapSupplierParameters(src.Passengers[i].SupplierParameters),
 		}
 	}
-	return flights.PassengerDataRequest{
+	return flightbooking.PassengerDataRequest{
 		SearchID:   src.SearchId,
 		OfferID:    src.OfferId,
 		Passengers: passengers,
-		ContactData: flights.ContactData{
+		ContactData: flightsession.ContactData{
 			Email: string(src.ContactData.Email),
-			Phone: flights.Phone{
+			Phone: flightsession.Phone{
 				InternationalCode: src.ContactData.Phone.InternationalCode,
 				Number:            src.ContactData.Phone.Number,
 			},
@@ -75,13 +76,13 @@ func mapPassengerDataRequest(src api.PassengerDataRequest) flights.PassengerData
 	}
 }
 
-func mapSupplierParameters(src *[]api.CustomSupplierParameter) []flights.SupplierParameter {
+func mapSupplierParameters(src *[]api.CustomSupplierParameter) []flightsession.SupplierParameter {
 	if src == nil {
 		return nil
 	}
-	result := make([]flights.SupplierParameter, len(*src))
+	result := make([]flightsession.SupplierParameter, len(*src))
 	for i := range *src {
-		result[i] = flights.SupplierParameter{
+		result[i] = flightsession.SupplierParameter{
 			ParamName:  (*src)[i].ParamName,
 			ParamValue: (*src)[i].ParamValue,
 		}
@@ -89,7 +90,7 @@ func mapSupplierParameters(src *[]api.CustomSupplierParameter) []flights.Supplie
 	return result
 }
 
-func mapPassengerDataResponse(src flights.PassengerDataResponse) api.PassengerDataResponse {
+func mapPassengerDataResponse(src flightbooking.PassengerDataResponse) api.PassengerDataResponse {
 	responses := make([]api.ProcessTermsSupplierResponse, len(src.SupplierResponses))
 	for i := range src.SupplierResponses {
 		responses[i] = api.ProcessTermsSupplierResponse{
@@ -113,25 +114,25 @@ func (s *HttpServer) GetSelectedOffer(
 	request api.GetSelectedOfferRequestObject,
 ) (api.GetSelectedOfferResponseObject, error) {
 	locale := localeFromContext(ctx)
-	ctx = flights.WithLocale(ctx, locale)
-	selectedOffer, err := s.flightService.GetSelectedOffer(ctx, request.Params.SearchId, request.Params.OfferId)
-	if errors.Is(err, flights.ErrInvalidRequest) {
+	ctx = flightbooking.WithLocale(ctx, locale)
+	selectedOffer, err := s.bookingService.GetSelectedOffer(ctx, request.Params.SearchId, request.Params.OfferId)
+	if errors.Is(err, flightbooking.ErrInvalidRequest) {
 		return api.GetSelectedOffer400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
-	if errors.Is(err, flights.ErrNotFound) {
+	if errors.Is(err, flightbooking.ErrNotFound) {
 		return api.GetSelectedOffer404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
 	}
 	if err != nil {
 		return api.GetSelectedOffer500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
 	}
-	enrichedOffer, err := s.flightService.EnrichOffer(ctx, selectedOffer.Offer, locale)
+	enrichedOffer, err := s.bookingService.EnrichOffer(ctx, selectedOffer.Offer, locale)
 	if err != nil {
 		return api.GetSelectedOffer500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
 	}
 	return api.GetSelectedOffer200JSONResponse(mapSelectedOffer(*selectedOffer, enrichedOffer)), nil
 }
 
-func mapSelectedOffer(src flights.SelectedOffer, offer flights.EnrichedOffer) api.SelectedOffer {
+func mapSelectedOffer(src flightbooking.SelectedOffer, offer flightbooking.EnrichedOffer) api.SelectedOffer {
 	return api.SelectedOffer{
 		Offer:            mapAPIOffer(offer),
 		SearchParams:     mapAPIFlightSearchParams(src.SearchParams),
@@ -139,7 +140,7 @@ func mapSelectedOffer(src flights.SelectedOffer, offer flights.EnrichedOffer) ap
 	}
 }
 
-func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
+func mapAPIOffer(src flightsession.EnrichedOffer) api.Offer {
 	offer := api.Offer{
 		OfferId:         src.OfferID,
 		OutboundFlight:  mapAPIFlight(src.OutboundFlight),
@@ -155,7 +156,7 @@ func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
 	return offer
 }
 
-func mapAPIPassengerPrices(src flights.PassengerPrices) api.PassengerPrices {
+func mapAPIPassengerPrices(src flightsession.PassengerPrices) api.PassengerPrices {
 	return api.PassengerPrices{
 		Adults:   nonNilAPIFloatList(src.Adults),
 		Children: nonNilAPIFloatList(src.Children),
@@ -170,7 +171,7 @@ func nonNilAPIFloatList(values []float64) []float64 {
 	return values
 }
 
-func mapAPIFareBand(src flights.FareBand) api.FareBand {
+func mapAPIFareBand(src flightsession.FareBand) api.FareBand {
 	features := src.Features
 	if features == nil {
 		features = []string{}
@@ -181,7 +182,7 @@ func mapAPIFareBand(src flights.FareBand) api.FareBand {
 	}
 }
 
-func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
+func mapAPIFlight(src flightsession.EnrichedFlight) api.Flight {
 	segments := make([]api.FlightSegment, len(src.Segments))
 	for i := range src.Segments {
 		segments[i] = api.FlightSegment{
@@ -190,7 +191,7 @@ func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 			ArrivalFlightAirport:   mapAPIFlightAirport(src.Segments[i].ArrivalFlightAirport),
 			DepartureTime:          formatLocalDateTime(src.Segments[i].DepartureTime),
 			ArrivalTime:            formatLocalDateTime(src.Segments[i].ArrivalTime),
-			DurationMinutes:        int32Ptr(src.Segments[i].DurationMinutes),
+			DurationMinutes:        optionalInt32(src.Segments[i].DurationMinutes),
 			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
 			Operator:               mapAPIFlightOperator(src.Segments[i].Operator),
 		}
@@ -203,14 +204,14 @@ func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 	}
 }
 
-func mapAPIFlightAirport(src flights.FlightAirport) api.FlightAirport {
+func mapAPIFlightAirport(src flightsession.FlightAirport) api.FlightAirport {
 	return api.FlightAirport{
 		Code:     src.Code,
 		CityName: src.CityName,
 	}
 }
 
-func mapAPIFlightOperator(src flights.EnrichedOperator) *api.FlightOperator {
+func mapAPIFlightOperator(src flightsession.EnrichedOperator) *api.FlightOperator {
 	if src.Name == "" && src.Code == "" && src.Logo == "" {
 		return nil
 	}
@@ -221,7 +222,7 @@ func mapAPIFlightOperator(src flights.EnrichedOperator) *api.FlightOperator {
 	}
 }
 
-func mapAPIFlightSearchParams(src flights.SearchRequest) api.FlightSearchParams {
+func mapAPIFlightSearchParams(src flightsession.SearchRequest) api.FlightSearchParams {
 	params := api.FlightSearchParams{
 		DepartureAirportCode:                src.DepartureAirportCode,
 		ArrivalAirportCode:                  src.ArrivalAirportCode,
@@ -254,7 +255,7 @@ func mapAPIFlightSearchParams(src flights.SearchRequest) api.FlightSearchParams 
 	return params
 }
 
-func mapAPIAdditionalFields(src []flights.AdditionalField) []api.AdditionalField {
+func mapAPIAdditionalFields(src []flightsession.AdditionalField) []api.AdditionalField {
 	result := make([]api.AdditionalField, len(src))
 	for i := range src {
 		options := make([]api.AdditionalFieldOption, len(src[i].Options))
@@ -282,7 +283,7 @@ func mapAPIAdditionalFields(src []flights.AdditionalField) []api.AdditionalField
 	return result
 }
 
-func mapAPISegmentSeatMaps(src []flights.SegmentSeatMap) []api.SegmentSeatMap {
+func mapAPISegmentSeatMaps(src []flightsession.SegmentSeatMap) []api.SegmentSeatMap {
 	result := make([]api.SegmentSeatMap, len(src))
 	for i := range src {
 		seats := make([]api.SeatDetail, len(src[i].Seats))
@@ -324,21 +325,6 @@ func optionalIntPointer(value *int) *int32 {
 		return nil
 	}
 	converted := int32(*value)
-	return &converted
-}
-
-func optionalFloat64(value float64) *float64 {
-	if value == 0 {
-		return nil
-	}
-	return &value
-}
-
-func int32Ptr(value int) *int32 {
-	if value == 0 {
-		return nil
-	}
-	converted := int32(value)
 	return &converted
 }
 

@@ -8,6 +8,8 @@ import (
 	"avmd-search-engine-go/internal/currencies"
 	dbstore "avmd-search-engine-go/internal/db"
 	"avmd-search-engine-go/internal/flights"
+	flightbooking "avmd-search-engine-go/internal/flights/booking"
+	flightsearch "avmd-search-engine-go/internal/flights/search"
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/geo"
 	"avmd-search-engine-go/internal/redishealth"
@@ -28,7 +30,8 @@ type HttpServer struct {
 	cfg             *config.Config
 	calendarService *calendar.Service
 	currencyService *currencies.Service
-	flightService   *flights.Service
+	bookingService  *flightbooking.Service
+	searchService   *flightsearch.Service
 	geoService      *geo.Service
 	routeService    *supplierroutes.Service
 	logger          *slog.Logger
@@ -101,7 +104,7 @@ func (s *HttpServer) InitHandlers() error {
 	if err == nil {
 		airportLookup = flights.NewSQLCAirportLookup(db)
 	}
-	s.flightService = flights.NewServiceWithAirportLookup(
+	s.searchService = flightsearch.NewService(
 		tfClient,
 		sessionStore,
 		s.calendarService,
@@ -110,7 +113,16 @@ func (s *HttpServer) InitHandlers() error {
 		s.cfg.DefaultCurrencyCode,
 		s.logger,
 	)
-	s.flightService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
+	s.searchService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
+	s.bookingService = flightbooking.NewService(
+		tfClient,
+		sessionStore,
+		s.currencyService,
+		airportLookup,
+		s.cfg.DefaultCurrencyCode,
+		s.logger,
+	)
+	s.bookingService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
 	return nil
 }
 

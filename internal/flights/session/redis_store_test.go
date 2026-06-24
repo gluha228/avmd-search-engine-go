@@ -1,7 +1,6 @@
 package session
 
 import (
-	"avmd-search-engine-go/internal/flights"
 	"context"
 	"encoding/json"
 	"testing"
@@ -13,9 +12,9 @@ import (
 func TestRedisStoreSaveSavesSessionWithTTL(t *testing.T) {
 	db, mock := redismock.NewClientMock()
 	store := NewRedisStore(db, 24*time.Hour, nil)
-	session := flights.FlightSearchSession{
+	session := FlightSearchSession{
 		TFRoutingID: "RID",
-		TFOffers: []flights.Offer{
+		TFOffers: []Offer{
 			{OfferID: "OUT1", CurrencyCode: "EUR", Price: 100},
 		},
 	}

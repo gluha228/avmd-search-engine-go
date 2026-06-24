@@ -1,244 +1,33 @@
 package flights
 
-import "time"
+import flightsession "avmd-search-engine-go/internal/flights/session"
 
-type SearchRequest struct {
-	DepartureAirportCode                string
-	ArrivalAirportCode                  string
-	DepartureDate                       time.Time
-	ReturnDate                          *time.Time
-	AdultCount                          int
-	ChildCount                          int
-	InfantCount                         int
-	MinPrice                            *float64
-	MaxPrice                            *float64
-	MinSegments                         *int
-	MaxSegments                         *int
-	MinTotalDurationMinutes             *int
-	MaxTotalDurationMinutes             *int
-	MinIndividualSegmentDurationMinutes *int
-	MaxIndividualSegmentDurationMinutes *int
-	MinLayoverMinutes                   *int
-	MaxLayoverMinutes                   *int
-	DepartureOutboundFrom               *time.Time
-	DepartureOutboundTo                 *time.Time
-	ArrivalOutboundFrom                 *time.Time
-	ArrivalOutboundTo                   *time.Time
-	DepartureInboundFrom                *time.Time
-	DepartureInboundTo                  *time.Time
-	ArrivalInboundFrom                  *time.Time
-	ArrivalInboundTo                    *time.Time
-}
-
-type SearchResponse struct {
-	SearchID  string
-	RoutingID string
-	Offers    []Offer
-}
-
-type SearchOffersUpdate struct {
-	SearchID  string
-	RoutingID string
-	Offers    []Offer
-	Err       error
-}
-
-type SelectedOffer struct {
-	Offer            Offer
-	SearchParams     SearchRequest
-	AdditionalFields []AdditionalField
-}
-
-type PassengerDataRequest struct {
-	SearchID           string
-	OfferID            string
-	Passengers         []Passenger
-	ContactData        ContactData
-	SupplierParameters []SupplierParameter
-}
-
-type Passenger struct {
-	Title                  string
-	FirstName              string
-	LastName               string
-	DateOfBirth            time.Time
-	CitizenshipCountryCode string
-	SupplierParameters     []SupplierParameter
-}
-
-type ContactData struct {
-	Email string
-	Phone Phone
-}
-
-type Phone struct {
-	InternationalCode string
-	Number            string
-}
-
-type SupplierParameter struct {
-	ParamName  string
-	ParamValue string
-}
-
-type PassengerDataResponse struct {
-	RoutingID                           string
-	TFBookingReference                  string
-	FinalAmount                         *float64
-	FinalCurrency                       string
-	SupplierVisualAuthorisationImageURL string
-	SupplierResponses                   []ProcessTermsSupplierResponse
-}
-
-type ProcessTermsSupplierResponse struct {
-	Name string
-	Type string
-	Data string
-}
-
-type AdditionalField struct {
-	Code         string
-	Description  string
-	InputType    string
-	Required     bool
-	PerPassenger bool
-	Options      []AdditionalFieldOption
-}
-
-type AdditionalFieldOption struct {
-	Value string
-	Label string
-	Price *AdditionalFieldOptionPrice
-}
-
-type AdditionalFieldOptionPrice struct {
-	Amount       float64
-	CurrencyCode string
-}
-
-type Offer struct {
-	OfferID         string
-	OutboundFlight  Flight
-	InboundFlight   *Flight
-	CurrencyCode    string
-	FareBand        FareBand
-	Price           float64
-	PassengerPrices PassengerPrices
-}
-
-type EnrichedOffer struct {
-	OfferID         string
-	OutboundFlight  EnrichedFlight
-	InboundFlight   *EnrichedFlight
-	CurrencyCode    string
-	FareBand        FareBand
-	Price           float64
-	PassengerPrices PassengerPrices
-}
-
-type PassengerPrices struct {
-	Adults   []float64
-	Children []float64
-	Infants  []float64
-}
-
-type FareBand struct {
-	Name     string
-	Features []string
-}
-
-type Flight struct {
-	DepartureAirportCode string
-	ArrivalAirportCode   string
-	SeatsAvailable       int
-	Price                float64
-	Segments             []Segment
-}
-
-type EnrichedFlight struct {
-	DepartureFlightAirport FlightAirport
-	ArrivalFlightAirport   FlightAirport
-	SeatsAvailable         int
-	Price                  float64
-	Segments               []EnrichedSegment
-}
-
-type FlightAirport struct {
-	Code     string
-	CityName string
-}
-
-type Segment struct {
-	SegmentID            int
-	DepartureAirportCode string
-	ArrivalAirportCode   string
-	DepartureTime        *time.Time
-	ArrivalTime          *time.Time
-	DurationMinutes      int
-	FlightNumber         string
-	TravelClass          string
-	Operator             Operator
-}
-
-type EnrichedSegment struct {
-	SegmentID              int
-	DepartureFlightAirport FlightAirport
-	ArrivalFlightAirport   FlightAirport
-	DepartureTime          *time.Time
-	ArrivalTime            *time.Time
-	DurationMinutes        int
-	FlightNumber           string
-	TravelClass            string
-	Operator               EnrichedOperator
-}
-
-type Operator struct {
-	Name string
-	Code string
-}
-
-type EnrichedOperator struct {
-	Name string
-	Code string
-	Logo string
-}
-
-type FlightSearchSession struct {
-	Params               SearchRequest                 `json:"params"`
-	TFRoutingID          string                        `json:"tf_routing_id"`
-	TFOffers             []Offer                       `json:"tf_offers"`
-	TFSeatMapByOfferID   map[string][]SegmentSeatMap   `json:"tf_seat_map_by_offer_id,omitempty"`
-	SelectedOfferID      string                        `json:"selected_offer_id,omitempty"`
-	TFRequiredParameters []TFRequiredParameterSnapshot `json:"tf_required_parameters,omitempty"`
-}
-
-type TFRequiredParameterSnapshot struct {
-	Parameter           string `json:"parameter"`
-	Value               string `json:"value,omitempty"`
-	Type                string `json:"type,omitempty"`
-	PerPassenger        *bool  `json:"per_passenger,omitempty"`
-	IsOptional          *bool  `json:"is_optional,omitempty"`
-	IsSometimesRequired bool   `json:"is_sometimes_required"`
-	DisplayText         string `json:"display_text,omitempty"`
-}
-
-type SegmentSeatMap struct {
-	SegmentID    int
-	Origin       string
-	Destination  string
-	FlightNumber string
-	Seats        []SeatDetail
-}
-
-type SeatDetail struct {
-	Code                       string
-	Type                       string
-	SeatDescription            *string
-	Price                      *float64
-	CurrencyCode               *string
-	Row                        int
-	Col                        int
-	IsAvailable                bool
-	PersonsWithReducedMobility bool
-	NoInfantSeat               bool
-}
+type SearchRequest = flightsession.SearchRequest
+type SearchResponse = flightsession.SearchResponse
+type SearchOffersUpdate = flightsession.SearchOffersUpdate
+type SelectedOffer = flightsession.SelectedOffer
+type PassengerDataRequest = flightsession.PassengerDataRequest
+type Passenger = flightsession.Passenger
+type ContactData = flightsession.ContactData
+type Phone = flightsession.Phone
+type SupplierParameter = flightsession.SupplierParameter
+type PassengerDataResponse = flightsession.PassengerDataResponse
+type ProcessTermsSupplierResponse = flightsession.ProcessTermsSupplierResponse
+type AdditionalField = flightsession.AdditionalField
+type AdditionalFieldOption = flightsession.AdditionalFieldOption
+type AdditionalFieldOptionPrice = flightsession.AdditionalFieldOptionPrice
+type Offer = flightsession.Offer
+type EnrichedOffer = flightsession.EnrichedOffer
+type PassengerPrices = flightsession.PassengerPrices
+type FareBand = flightsession.FareBand
+type Flight = flightsession.Flight
+type EnrichedFlight = flightsession.EnrichedFlight
+type FlightAirport = flightsession.FlightAirport
+type Segment = flightsession.Segment
+type EnrichedSegment = flightsession.EnrichedSegment
+type Operator = flightsession.Operator
+type EnrichedOperator = flightsession.EnrichedOperator
+type FlightSearchSession = flightsession.FlightSearchSession
+type TFRequiredParameterSnapshot = flightsession.TFRequiredParameterSnapshot
+type SegmentSeatMap = flightsession.SegmentSeatMap
+type SeatDetail = flightsession.SeatDetail

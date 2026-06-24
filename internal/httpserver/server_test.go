@@ -4,6 +4,8 @@ import (
 	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/flights"
+	flightbooking "avmd-search-engine-go/internal/flights/booking"
+	flightsearch "avmd-search-engine-go/internal/flights/search"
 	"avmd-search-engine-go/internal/testsupport"
 	"avmd-search-engine-go/internal/travelfusion"
 	"bytes"
@@ -224,7 +226,7 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 	segmentArrival := departure.Add(90 * time.Minute)
 	store := &fakeSessionStore{searchID: "search-1"}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{result: &travelfusion.SearchResult{
+	server.searchService = flightsearch.NewService(fakeTFClient{result: &travelfusion.SearchResult{
 		RoutingID: "RID",
 		OutwardFlights: []travelfusion.Flight{
 			{
@@ -252,7 +254,7 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 				},
 			},
 		},
-	}}, store, nil)
+	}}, store, nil, nil, nil, "", nil)
 
 	request := httptest.NewRequest(
 		http.MethodGet,
@@ -297,7 +299,7 @@ func TestSearchFlightsStreamsLocalizedAirportObjects(t *testing.T) {
 		"OTP": {Code: "OTP", CityName: "Бухарест"},
 	}}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithAirportLookup(fakeTFClient{result: &travelfusion.SearchResult{
+	server.searchService = flightsearch.NewService(fakeTFClient{result: &travelfusion.SearchResult{
 		RoutingID: "RID",
 		OutwardFlights: []travelfusion.Flight{
 			{
@@ -349,7 +351,7 @@ func TestSearchFlightsStreamsOffersAsTheyArrive(t *testing.T) {
 	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
 	store := &fakeSessionStore{searchID: "search-1"}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{searchUpdates: []travelfusion.SearchUpdate{
+	server.searchService = flightsearch.NewService(fakeTFClient{searchUpdates: []travelfusion.SearchUpdate{
 		{RoutingID: "RID"},
 		{RoutingID: "RID", OutwardFlights: []travelfusion.Flight{
 			{
@@ -379,7 +381,7 @@ func TestSearchFlightsStreamsOffersAsTheyArrive(t *testing.T) {
 				},
 			},
 		}},
-	}}, store, nil)
+	}}, store, nil, nil, nil, "", nil)
 
 	request := httptest.NewRequest(
 		http.MethodGet,
@@ -449,7 +451,7 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	isOptional := false
 	perPassenger := true
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+	server.bookingService = flightbooking.NewService(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
 		RoutingID: "RID",
 		RequiredParameters: []travelfusion.RequiredParameter{
 			{
@@ -460,7 +462,7 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 				PerPassenger: &perPassenger,
 			},
 		},
-	}}, store, nil)
+	}}, store, nil, nil, "", nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/selected-offer?searchId=search-1&offerId=TF-OUT1", nil)
 	recorder := httptest.NewRecorder()
@@ -524,7 +526,7 @@ func TestGetSelectedOfferLocalizesLuggageAdditionalFields(t *testing.T) {
 	}}
 	isOptional := false
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
+	server.bookingService = flightbooking.NewService(fakeTFClient{processDetails: &travelfusion.ProcessDetailsResult{
 		RoutingID: "RID",
 		RequiredParameters: []travelfusion.RequiredParameter{
 			{
@@ -534,7 +536,7 @@ func TestGetSelectedOfferLocalizesLuggageAdditionalFields(t *testing.T) {
 				IsOptional:  &isOptional,
 			},
 		},
-	}}, store, nil)
+	}}, store, nil, nil, "", nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/selected-offer?searchId=search-1&offerId=TF-OUT1", nil)
 	request.Header.Set("Accept-Language", "ru")
@@ -579,7 +581,7 @@ func TestGetSeatMapReturnsCachedSeats(t *testing.T) {
 		},
 	}}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{}, store, nil)
+	server.bookingService = flightbooking.NewService(fakeTFClient{}, store, nil, nil, "", nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/booking/seats?searchId=search-1&offerId=TF-OUT1", nil)
 	recorder := httptest.NewRecorder()
@@ -605,7 +607,7 @@ func TestSubmitPassengerDataReturnsProcessTermsResponse(t *testing.T) {
 		TFOffers:        []flights.Offer{{OfferID: "TF-OUT1"}},
 	}}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{
+	server.bookingService = flightbooking.NewService(fakeTFClient{
 		processTerms: &travelfusion.ProcessTermsResult{
 			RoutingID:          "RID",
 			TFBookingReference: "BOOK123",
@@ -615,7 +617,7 @@ func TestSubmitPassengerDataReturnsProcessTermsResponse(t *testing.T) {
 				{Name: "prebooking", Type: "html", Data: "<p>ok</p>"},
 			},
 		},
-	}, sessionStore, nil)
+	}, sessionStore, nil, nil, "", nil)
 
 	body := `{
 		"search_id":"search-1",
