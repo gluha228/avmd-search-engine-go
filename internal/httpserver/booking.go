@@ -192,6 +192,7 @@ func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 			ArrivalTime:            formatLocalDateTime(src.Segments[i].ArrivalTime),
 			DurationMinutes:        int32Ptr(src.Segments[i].DurationMinutes),
 			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
+			Operator:               mapAPIFlightOperator(src.Segments[i].Operator),
 		}
 	}
 	return api.Flight{
@@ -206,6 +207,17 @@ func mapAPIFlightAirport(src flights.FlightAirport) api.FlightAirport {
 	return api.FlightAirport{
 		Code:     src.Code,
 		CityName: src.CityName,
+	}
+}
+
+func mapAPIFlightOperator(src flights.EnrichedOperator) *api.FlightOperator {
+	if src.Name == "" && src.Code == "" && src.Logo == "" {
+		return nil
+	}
+	return &api.FlightOperator{
+		Name: src.Name,
+		Code: src.Code,
+		Logo: src.Logo,
 	}
 }
 

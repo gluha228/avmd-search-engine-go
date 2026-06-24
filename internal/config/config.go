@@ -24,6 +24,7 @@ type Config struct {
 	TFTimeoutSeconds              int    `env:"TF_TIMEOUT_SECONDS" envDefault:"60"`
 	TFPollingAttempts             int    `env:"TF_POLLING_ATTEMPTS" envDefault:"10"`
 	TFPollingDelaySeconds         int    `env:"TF_POLLING_DELAY_SECONDS" envDefault:"2"`
+	TFOperatorLogoURLPattern      string `env:"TF_OPERATOR_LOGO_URL_PATTERN" envDefault:"https://www.travelfusion.com/images/operators/p%s.gif"`
 	TFCurrenciesUpdateCron        string `env:"TF_CURRENCIES_UPDATE_CRON" envDefault:"0 0 3 * * ?"`
 	TFCurrenciesUpdateTime        string `env:"TF_CURRENCIES_UPDATE_TIME" envDefault:"03:00"`
 	TFRoutesUpdateCron            string `env:"TF_ROUTES_UPDATE_CRON" envDefault:"0 0 4 * * ?"`

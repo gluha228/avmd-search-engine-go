@@ -232,6 +232,13 @@ type sseSegment struct {
 	ArrivalTime            *string          `json:"arrival_time,omitempty"`
 	DurationMinutes        *int             `json:"duration_minutes,omitempty"`
 	FlightNumber           *string          `json:"flight_number,omitempty"`
+	Operator               *sseOperator     `json:"operator,omitempty"`
+}
+
+type sseOperator struct {
+	Name string `json:"name"`
+	Code string `json:"code"`
+	Logo string `json:"logo"`
 }
 
 type sseFlightAirport struct {
@@ -295,6 +302,7 @@ func mapFlight(src flights.EnrichedFlight) sseFlight {
 			ArrivalTime:            formatLocalDateTime(src.Segments[i].ArrivalTime),
 			DurationMinutes:        intPtr(src.Segments[i].DurationMinutes),
 			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
+			Operator:               mapSSEOperator(src.Segments[i].Operator),
 		}
 	}
 	return sseFlight{
@@ -309,6 +317,17 @@ func mapSSEFlightAirport(src flights.FlightAirport) sseFlightAirport {
 	return sseFlightAirport{
 		Code:     src.Code,
 		CityName: src.CityName,
+	}
+}
+
+func mapSSEOperator(src flights.EnrichedOperator) *sseOperator {
+	if src.Name == "" && src.Code == "" && src.Logo == "" {
+		return nil
+	}
+	return &sseOperator{
+		Name: src.Name,
+		Code: src.Code,
+		Logo: src.Logo,
 	}
 }
 

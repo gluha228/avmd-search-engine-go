@@ -1225,6 +1225,18 @@ components:
           format: int32
         flight_number:
           type: string
+        operator:
+          $ref: "#/components/schemas/FlightOperator"
+    FlightOperator:
+      type: object
+      required: [name, code, logo]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        logo:
+          type: string
     FlightAirport:
       type: object
       required: [code, city_name]

@@ -247,6 +247,7 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 						DurationMinutes: 90,
 						FlightNumber:    "TF100",
 						TravelClass:     "Economy",
+						Operator:        travelfusion.Operator{Name: "Bangkok Airways", Code: "PG"},
 					},
 				},
 			},
@@ -269,7 +270,7 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 		t.Fatalf("expected SSE content type, got %q", contentType)
 	}
 	body := recorder.Body.String()
-	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, `"passenger_prices":{"adults":[100],"children":[],"infants":[]}`, `"departure_time":"2026-07-02T22:30:00"`, "event: done\ndata: \n\n"} {
+	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, `"passenger_prices":{"adults":[100],"children":[],"infants":[]}`, `"operator":{"name":"Bangkok Airways","code":"PG","logo":"https://www.travelfusion.com/images/operators/ppg.gif"}`, `"departure_time":"2026-07-02T22:30:00"`, "event: done\ndata: \n\n"} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected SSE body to contain %q, got %q", expected, body)
 		}
@@ -282,6 +283,9 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
+	}
+	if got := store.session.TFOffers[0].OutboundFlight.Segments[0].Operator; got.Name != "Bangkok Airways" || got.Code != "PG" {
+		t.Fatalf("expected cached operator without logo, got %+v", got)
 	}
 }
 
@@ -435,6 +439,7 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 							DurationMinutes:      90,
 							FlightNumber:         "TF100",
 							TravelClass:          "Economy",
+							Operator:             flights.Operator{Name: "Bangkok Airways", Code: "PG"},
 						},
 					},
 				},
@@ -479,6 +484,11 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 		t.Fatalf("unexpected passenger_prices response: %s", recorder.Body.String())
 	}
 	outboundFlight := offer["outbound_flight"].(map[string]any)
+	segments := outboundFlight["segments"].([]any)
+	operator := segments[0].(map[string]any)["operator"].(map[string]any)
+	if operator["name"] != "Bangkok Airways" || operator["code"] != "PG" || operator["logo"] != "https://www.travelfusion.com/images/operators/ppg.gif" {
+		t.Fatalf("unexpected operator response: %s", recorder.Body.String())
+	}
 	if _, ok := outboundFlight["price"]; ok {
 		t.Fatalf("expected outbound_flight price to be omitted, got %s", recorder.Body.String())
 	}

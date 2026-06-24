@@ -177,6 +177,7 @@ type Segment struct {
 	DurationMinutes      int
 	FlightNumber         string
 	TravelClass          string
+	Operator             Operator
 }
 
 type EnrichedSegment struct {
@@ -188,6 +189,18 @@ type EnrichedSegment struct {
 	DurationMinutes        int
 	FlightNumber           string
 	TravelClass            string
+	Operator               EnrichedOperator
+}
+
+type Operator struct {
+	Name string
+	Code string
+}
+
+type EnrichedOperator struct {
+	Name string
+	Code string
+	Logo string
 }
 
 type FlightSearchSession struct {

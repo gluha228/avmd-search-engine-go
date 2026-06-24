@@ -337,6 +337,29 @@ func TestEnrichOffersUsesLocalizedAirportNamesWithoutMutatingCachedOffer(t *test
 	}
 }
 
+func TestEnrichOffersAddsOperatorLogoFromPattern(t *testing.T) {
+	service := NewServiceWithAirportLookup(fakeTFClient{}, nil, nil, nil, nil, "EUR", nil)
+	service.SetOperatorLogoURLPattern("https://cdn.example.test/operators/%s.png")
+	offer := Offer{
+		OfferID: "TF-OUT1",
+		OutboundFlight: Flight{Segments: []Segment{
+			{Operator: Operator{Name: "Bangkok Airways", Code: "PG"}},
+		}},
+	}
+
+	enriched, err := service.EnrichOffers(context.Background(), []Offer{offer}, "en")
+	if err != nil {
+		t.Fatalf("EnrichOffers returned error: %v", err)
+	}
+	operator := enriched[0].OutboundFlight.Segments[0].Operator
+	if operator.Name != "Bangkok Airways" || operator.Code != "PG" || operator.Logo != "https://cdn.example.test/operators/pg.png" {
+		t.Fatalf("unexpected enriched operator: %+v", operator)
+	}
+	if offer.OutboundFlight.Segments[0].Operator.Code != "PG" {
+		t.Fatalf("cached offer operator was mutated: %+v", offer.OutboundFlight.Segments[0].Operator)
+	}
+}
+
 func TestEnrichSearchOffersConvertsPricesToDefaultCurrencyWithoutMutatingCachedOffer(t *testing.T) {
 	converter := &fakeCurrencyConverter{results: []float64{90, 45}}
 	service := NewServiceWithBookingDependencies(fakeTFClient{}, nil, nil, converter, "EUR", nil)

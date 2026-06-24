@@ -312,6 +312,7 @@ func TestExtractFlights(t *testing.T) {
                     <DepartDate>01/07/2026-08:00</DepartDate>
                     <ArriveDate>01/07/2026-09:30</ArriveDate>
                     <Duration>90</Duration>
+                    <TfOperator><Name>Bangkok Airways</Name><Code>PG</Code></TfOperator>
                     <FlightId><Code>TF100</Code></FlightId>
                     <TravelClass>
                       <TfClass>Economy With Restrictions</TfClass>
@@ -347,6 +348,9 @@ func TestExtractFlights(t *testing.T) {
 	}
 	if len(outward[0].Segments) != 1 || outward[0].Segments[0].FlightNumber != "TF100" {
 		t.Fatalf("unexpected segments: %+v", outward[0].Segments)
+	}
+	if outward[0].Segments[0].Operator.Name != "Bangkok Airways" || outward[0].Segments[0].Operator.Code != "PG" {
+		t.Fatalf("unexpected operator: %+v", outward[0].Segments[0].Operator)
 	}
 	if outward[0].Segments[0].TravelClass != "Economy With Restrictions" || outward[0].MinimalTravelClass != "Economy With Restrictions" {
 		t.Fatalf("unexpected travel class: %+v", outward[0])

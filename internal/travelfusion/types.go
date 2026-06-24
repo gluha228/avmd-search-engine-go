@@ -36,6 +36,12 @@ type Segment struct {
 	DurationMinutes int
 	FlightNumber    string
 	TravelClass     string
+	Operator        Operator
+}
+
+type Operator struct {
+	Name string
+	Code string
 }
 
 func formatTFTime(t time.Time) string {

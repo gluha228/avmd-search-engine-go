@@ -110,6 +110,7 @@ func (s *HttpServer) InitHandlers() error {
 		s.cfg.DefaultCurrencyCode,
 		s.logger,
 	)
+	s.flightService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
 	return nil
 }
 

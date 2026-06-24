@@ -18,6 +18,8 @@ var (
 	iataCodePattern   = regexp.MustCompile(`^[A-Z]{3}$`)
 )
 
+const defaultOperatorLogoURLPattern = "https://www.travelfusion.com/images/operators/p%s.gif"
+
 type TravelfusionClient interface {
 	Search(ctx context.Context, req travelfusion.SearchRequest) (*travelfusion.SearchResult, error)
 	SearchStream(ctx context.Context, req travelfusion.SearchRequest) <-chan travelfusion.SearchUpdate
@@ -44,14 +46,15 @@ type FlightAirportLookup interface {
 }
 
 type Service struct {
-	tfClient        TravelfusionClient
-	sessionStore    SessionStore
-	calendar        CalendarCache
-	currency        CurrencyConverter
-	airportLookup   FlightAirportLookup
-	defaultCurrency string
-	logger          *slog.Logger
-	now             func() time.Time
+	tfClient               TravelfusionClient
+	sessionStore           SessionStore
+	calendar               CalendarCache
+	currency               CurrencyConverter
+	airportLookup          FlightAirportLookup
+	defaultCurrency        string
+	operatorLogoURLPattern string
+	logger                 *slog.Logger
+	now                    func() time.Time
 }
 
 func NewService(tfClient TravelfusionClient, logger *slog.Logger) *Service {
@@ -96,15 +99,24 @@ func NewServiceWithAirportLookup(
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
-		tfClient:        tfClient,
-		sessionStore:    sessionStore,
-		calendar:        calendarCache,
-		currency:        currencyConverter,
-		airportLookup:   airportLookup,
-		defaultCurrency: strings.ToUpper(strings.TrimSpace(defaultCurrency)),
-		logger:          logger,
-		now:             time.Now,
+		tfClient:               tfClient,
+		sessionStore:           sessionStore,
+		calendar:               calendarCache,
+		currency:               currencyConverter,
+		airportLookup:          airportLookup,
+		defaultCurrency:        strings.ToUpper(strings.TrimSpace(defaultCurrency)),
+		operatorLogoURLPattern: defaultOperatorLogoURLPattern,
+		logger:                 logger,
+		now:                    time.Now,
 	}
+}
+
+func (s *Service) SetOperatorLogoURLPattern(pattern string) {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		pattern = defaultOperatorLogoURLPattern
+	}
+	s.operatorLogoURLPattern = pattern
 }
 
 func (s *Service) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
@@ -391,6 +403,7 @@ func (s *Service) enrichFlight(flight Flight, airports map[string]FlightAirport)
 			DurationMinutes:        flight.Segments[i].DurationMinutes,
 			FlightNumber:           flight.Segments[i].FlightNumber,
 			TravelClass:            flight.Segments[i].TravelClass,
+			Operator:               s.enrichOperator(flight.Segments[i].Operator),
 		}
 	}
 	return EnrichedFlight{
@@ -400,6 +413,29 @@ func (s *Service) enrichFlight(flight Flight, airports map[string]FlightAirport)
 		Price:                  flight.Price,
 		Segments:               segments,
 	}
+}
+
+func (s *Service) enrichOperator(operator Operator) EnrichedOperator {
+	return EnrichedOperator{
+		Name: operator.Name,
+		Code: operator.Code,
+		Logo: s.operatorLogoURL(operator.Code),
+	}
+}
+
+func (s *Service) operatorLogoURL(code string) string {
+	code = strings.ToLower(strings.TrimSpace(code))
+	if code == "" {
+		return ""
+	}
+	pattern := strings.TrimSpace(s.operatorLogoURLPattern)
+	if pattern == "" {
+		pattern = defaultOperatorLogoURLPattern
+	}
+	if strings.Contains(pattern, "%s") {
+		return fmt.Sprintf(pattern, code)
+	}
+	return fmt.Sprintf("%sp%s.gif", strings.TrimRight(pattern, "/")+"/", code)
 }
 
 func collectOfferAirportCodes(offers []Offer) []string {
@@ -987,6 +1023,7 @@ func mapFlight(src travelfusion.Flight) Flight {
 			DurationMinutes:      segment.DurationMinutes,
 			FlightNumber:         segment.FlightNumber,
 			TravelClass:          segment.TravelClass,
+			Operator:             mapOperator(segment.Operator),
 		})
 	}
 	return Flight{
@@ -995,6 +1032,13 @@ func mapFlight(src travelfusion.Flight) Flight {
 		SeatsAvailable:       9,
 		Price:                src.Price,
 		Segments:             segments,
+	}
+}
+
+func mapOperator(src travelfusion.Operator) Operator {
+	return Operator{
+		Name: src.Name,
+		Code: src.Code,
 	}
 }
 

@@ -227,6 +227,13 @@ type FlightDay struct {
 	Price        float64            `json:"price"`
 }
 
+// FlightOperator defines model for FlightOperator.
+type FlightOperator struct {
+	Code string `json:"code"`
+	Logo string `json:"logo"`
+	Name string `json:"name"`
+}
+
 // FlightSearchParams defines model for FlightSearchParams.
 type FlightSearchParams struct {
 	AdultCount                          int32               `json:"adult_count"`
@@ -258,13 +265,14 @@ type FlightSearchParams struct {
 
 // FlightSegment defines model for FlightSegment.
 type FlightSegment struct {
-	ArrivalFlightAirport   FlightAirport `json:"arrival_flight_airport"`
-	ArrivalTime            *string       `json:"arrival_time,omitempty"`
-	DepartureFlightAirport FlightAirport `json:"departure_flight_airport"`
-	DepartureTime          *string       `json:"departure_time,omitempty"`
-	DurationMinutes        *int32        `json:"duration_minutes,omitempty"`
-	FlightNumber           *string       `json:"flight_number,omitempty"`
-	SegmentId              int32         `json:"segment_id"`
+	ArrivalFlightAirport   FlightAirport   `json:"arrival_flight_airport"`
+	ArrivalTime            *string         `json:"arrival_time,omitempty"`
+	DepartureFlightAirport FlightAirport   `json:"departure_flight_airport"`
+	DepartureTime          *string         `json:"departure_time,omitempty"`
+	DurationMinutes        *int32          `json:"duration_minutes,omitempty"`
+	FlightNumber           *string         `json:"flight_number,omitempty"`
+	Operator               *FlightOperator `json:"operator,omitempty"`
+	SegmentId              int32           `json:"segment_id"`
 }
 
 // Offer defines model for Offer.

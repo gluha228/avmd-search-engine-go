@@ -66,11 +66,19 @@ type xmlSegment struct {
 	Duration     int         `xml:"Duration"`
 	FlightID     flightID    `xml:"FlightId"`
 	TravelClass  travelClass `xml:"TravelClass"`
+	TfOperator   operator    `xml:"TfOperator"`
+	TFOperator   operator    `xml:"TFOperator"`
+	Operator     operator    `xml:"Operator"`
 }
 
 type travelClass struct {
 	Value   string `xml:",chardata"`
 	TfClass string `xml:"TfClass"`
+}
+
+type operator struct {
+	Name string `xml:"Name"`
+	Code string `xml:"Code"`
 }
 
 type xmlLocation struct {
@@ -145,6 +153,7 @@ func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn boo
 			DurationMinutes: segment.Duration,
 			FlightNumber:    strings.TrimSpace(segment.FlightID.Code),
 			TravelClass:     segment.TravelClass.value(),
+			Operator:        segment.operator(),
 		})
 	}
 
@@ -235,6 +244,23 @@ func (c travelClass) value() string {
 		return strings.TrimSpace(c.TfClass)
 	}
 	return strings.TrimSpace(c.Value)
+}
+
+func (s xmlSegment) operator() Operator {
+	if op := s.TfOperator.operator(); op.Code != "" || op.Name != "" {
+		return op
+	}
+	if op := s.TFOperator.operator(); op.Code != "" || op.Name != "" {
+		return op
+	}
+	return s.Operator.operator()
+}
+
+func (o operator) operator() Operator {
+	return Operator{
+		Name: strings.TrimSpace(o.Name),
+		Code: strings.TrimSpace(o.Code),
+	}
 }
 
 func routingComplete(resp checkRoutingResponse) bool {
