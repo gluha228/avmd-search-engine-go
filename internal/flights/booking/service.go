@@ -1,22 +1,39 @@
 package booking
 
 import (
-	"avmd-search-engine-go/internal/flights"
 	"avmd-search-engine-go/internal/flights/session"
+	"avmd-search-engine-go/internal/travelfusion"
 	"context"
+	"errors"
 	"log/slog"
+	"strings"
+	"time"
 )
 
 var (
-	ErrInvalidRequest = flights.ErrInvalidRequest
-	ErrNotFound       = flights.ErrNotFound
+	ErrInvalidRequest = errors.New("invalid flight booking request")
+	ErrNotFound       = errors.New("flight booking resource not found")
 )
 
-type TravelfusionClient = flights.TravelfusionClient
-type SessionStore = flights.SessionStore
-type CalendarCache = flights.CalendarCache
-type CurrencyConverter = flights.CurrencyConverter
-type FlightAirportLookup = flights.FlightAirportLookup
+const defaultOperatorLogoURLPattern = "https://www.travelfusion.com/images/operators/p%s.gif"
+
+type TravelfusionClient interface {
+	ProcessDetails(ctx context.Context, req travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error)
+	ProcessTerms(ctx context.Context, req travelfusion.ProcessTermsRequest) (*travelfusion.ProcessTermsResult, error)
+}
+
+type SessionStore interface {
+	Save(ctx context.Context, searchID string, session session.FlightSearchSession) error
+	Get(ctx context.Context, searchID string) (*session.FlightSearchSession, error)
+}
+
+type CurrencyConverter interface {
+	Convert(ctx context.Context, amount float64, from, to string) (float64, error)
+}
+
+type FlightAirportLookup interface {
+	FlightAirportsByIATACodes(ctx context.Context, codes []string, locale string) (map[string]session.FlightAirport, error)
+}
 
 type PassengerDataRequest = session.PassengerDataRequest
 type PassengerDataResponse = session.PassengerDataResponse
@@ -26,7 +43,14 @@ type SegmentSeatMap = session.SegmentSeatMap
 type Offer = session.Offer
 
 type Service struct {
-	inner *flights.Service
+	tfClient               TravelfusionClient
+	sessionStore           SessionStore
+	currency               CurrencyConverter
+	airportLookup          FlightAirportLookup
+	defaultCurrency        string
+	operatorLogoURLPattern string
+	logger                 *slog.Logger
+	now                    func() time.Time
 }
 
 func NewService(
@@ -37,37 +61,28 @@ func NewService(
 	defaultCurrency string,
 	logger *slog.Logger,
 ) *Service {
-	return &Service{inner: flights.NewServiceWithAirportLookup(
-		tfClient,
-		sessionStore,
-		nil,
-		currencyConverter,
-		airportLookup,
-		defaultCurrency,
-		logger,
-	)}
+	return &Service{
+		tfClient:               tfClient,
+		sessionStore:           sessionStore,
+		currency:               currencyConverter,
+		airportLookup:          airportLookup,
+		defaultCurrency:        strings.ToUpper(strings.TrimSpace(defaultCurrency)),
+		operatorLogoURLPattern: defaultOperatorLogoURLPattern,
+		logger:                 logger,
+		now:                    time.Now,
+	}
 }
 
+type localeContextKey struct{}
+
 func WithLocale(ctx context.Context, locale string) context.Context {
-	return flights.WithLocale(ctx, locale)
+	return context.WithValue(ctx, localeContextKey{}, normalizeLocale(locale))
 }
 
 func (s *Service) SetOperatorLogoURLPattern(pattern string) {
-	s.inner.SetOperatorLogoURLPattern(pattern)
-}
-
-func (s *Service) ProcessPassengerData(ctx context.Context, req PassengerDataRequest) (*PassengerDataResponse, error) {
-	return s.inner.ProcessPassengerData(ctx, req)
-}
-
-func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string) (*SelectedOffer, error) {
-	return s.inner.GetSelectedOffer(ctx, searchID, offerID)
-}
-
-func (s *Service) EnrichOffer(ctx context.Context, offer Offer, locale string) (EnrichedOffer, error) {
-	return s.inner.EnrichOffer(ctx, offer, locale)
-}
-
-func (s *Service) GetSeatMap(ctx context.Context, searchID, offerID string) ([]SegmentSeatMap, error) {
-	return s.inner.GetSeatMap(ctx, searchID, offerID)
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		pattern = defaultOperatorLogoURLPattern
+	}
+	s.operatorLogoURLPattern = pattern
 }
