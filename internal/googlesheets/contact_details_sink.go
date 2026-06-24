@@ -16,8 +16,8 @@ type ContactDetailsSink struct {
 	writeRange    string
 }
 
-func NewContactDetailsSink(ctx context.Context, credentialsFile, spreadsheetID, writeRange string) (*ContactDetailsSink, error) {
-	service, err := sheets.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, credentialsFile))
+func NewContactDetailsSink(ctx context.Context, credentialsJSON []byte, spreadsheetID, writeRange string) (*ContactDetailsSink, error) {
+	service, err := sheets.NewService(ctx, option.WithAuthCredentialsJSON(option.ServiceAccount, credentialsJSON))
 	if err != nil {
 		return nil, err
 	}

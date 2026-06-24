@@ -48,9 +48,6 @@ func NewHttpServer(cfg *config.Config, logger *slog.Logger) *HttpServer {
 }
 
 func (s *HttpServer) InitHandlers() error {
-	if err := s.cfg.Validate(); err != nil {
-		return err
-	}
 	tfClient := travelfusion.NewClient(travelfusion.Config{
 		BaseURL:             s.cfg.TFBaseURL,
 		XmlLoginID:          s.cfg.TFXmlLoginID,
@@ -127,17 +124,32 @@ func (s *HttpServer) InitHandlers() error {
 		s.logger,
 	)
 	s.bookingService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
-	if s.cfg.GoogleSheetsContactDetailsEnabled {
+	googleSheetsConfig, err := googlesheets.NewRedisConfigStore(redisClient).ContactDetailsConfig(context.Background())
+	if err != nil {
+		return err
+	}
+	if !googleSheetsConfig.Enabled {
+		if s.logger != nil {
+			s.logger.Debug("Google Sheets contact details sink is disabled")
+		}
+	} else {
 		sink, err := googlesheets.NewContactDetailsSink(
 			context.Background(),
-			s.cfg.GoogleSheetsCredentialsFile,
-			s.cfg.GoogleSheetsSpreadsheetID,
-			s.cfg.GoogleSheetsContactDetailsRange,
+			googleSheetsConfig.CredentialsJSON,
+			googleSheetsConfig.SpreadsheetID,
+			googleSheetsConfig.Range,
 		)
 		if err != nil {
 			return err
 		}
 		s.bookingService.SetContactDetailsSink(sink)
+		if s.logger != nil {
+			s.logger.Debug(
+				"Google Sheets contact details sink is enabled",
+				"spreadsheet_id", googleSheetsConfig.SpreadsheetID,
+				"range", googleSheetsConfig.Range,
+			)
+		}
 	}
 	return nil
 }
