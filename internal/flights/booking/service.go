@@ -35,16 +35,22 @@ type FlightAirportLookup interface {
 	FlightAirportsByIATACodes(ctx context.Context, codes []string, locale string) (map[string]session.FlightAirport, error)
 }
 
+type ContactDetailsSink interface {
+	AppendContactDetails(ctx context.Context, details session.ContactData, createdAt time.Time) error
+}
+
 type PassengerDataRequest = session.PassengerDataRequest
 type PassengerDataResponse = session.PassengerDataResponse
 type SelectedOffer = session.SelectedOffer
 type EnrichedOffer = session.EnrichedOffer
 type SegmentSeatMap = session.SegmentSeatMap
 type Offer = session.Offer
+type ContactData = session.ContactData
 
 type Service struct {
 	tfClient               TravelfusionClient
 	sessionStore           SessionStore
+	contactDetailsSink     ContactDetailsSink
 	currency               CurrencyConverter
 	airportLookup          FlightAirportLookup
 	defaultCurrency        string
@@ -71,6 +77,10 @@ func NewService(
 		logger:                 logger,
 		now:                    time.Now,
 	}
+}
+
+func (s *Service) SetContactDetailsSink(sink ContactDetailsSink) {
+	s.contactDetailsSink = sink
 }
 
 type localeContextKey struct{}

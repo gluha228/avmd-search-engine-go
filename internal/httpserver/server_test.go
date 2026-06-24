@@ -418,6 +418,10 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 			AdultCount:           1,
 		},
 		TFRoutingID: "RID",
+		ContactDetails: &flights.ContactData{
+			Email: "user@example.com",
+			Phone: flights.Phone{InternationalCode: "+373", Number: "69123456"},
+		},
 		TFOffers: []flights.Offer{
 			{
 				OfferID:      "TF-OUT1",
@@ -497,6 +501,11 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 	if searchParams["departure_airport_code"] != "KIV" || searchParams["adult_count"] != float64(1) {
 		t.Fatalf("unexpected search params response: %s", recorder.Body.String())
 	}
+	contactDetails := response["contact_details"].(map[string]any)
+	phone := contactDetails["phone"].(map[string]any)
+	if contactDetails["email"] != "user@example.com" || phone["international_code"] != "+373" || phone["number"] != "69123456" {
+		t.Fatalf("unexpected contact_details response: %s", recorder.Body.String())
+	}
 	if _, ok := response["available_ancillaries"]; ok {
 		t.Fatalf("expected available_ancillaries to be omitted, got %s", recorder.Body.String())
 	}
@@ -507,6 +516,34 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 	field := additionalFields[0].(map[string]any)
 	if field["code"] != "PASSPORT_NUMBER" || field["input_type"] != "TEXT" {
 		t.Fatalf("unexpected additional_fields response: %s", recorder.Body.String())
+	}
+}
+
+func TestSubmitBookingContactDetailsStoresSessionContactDetails(t *testing.T) {
+	store := &fakeSessionStore{session: flights.FlightSearchSession{}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.bookingService = flightbooking.NewService(fakeTFClient{}, store, nil, nil, "", nil)
+
+	body := `{
+		"email":"user@example.com",
+		"phone":{"international_code":"+373","number":"69123456"}
+	}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/booking/contact-details/search-1", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if store.session.ContactDetails == nil {
+		t.Fatal("expected contact details to be saved in session")
+	}
+	if store.session.ContactDetails.Email != "user@example.com" ||
+		store.session.ContactDetails.Phone.InternationalCode != "+373" ||
+		store.session.ContactDetails.Phone.Number != "69123456" {
+		t.Fatalf("unexpected saved contact details: %+v", store.session.ContactDetails)
 	}
 }
 

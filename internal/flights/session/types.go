@@ -46,6 +46,7 @@ type SearchOffersUpdate struct {
 type SelectedOffer struct {
 	Offer            Offer
 	SearchParams     SearchRequest
+	ContactDetails   *ContactData
 	AdditionalFields []AdditionalField
 }
 
@@ -211,6 +212,7 @@ type FlightSearchSession struct {
 	TFSeatMapByOfferID   map[string][]SegmentSeatMap   `json:"tf_seat_map_by_offer_id,omitempty"`
 	SelectedOfferID      string                        `json:"selected_offer_id,omitempty"`
 	TFRequiredParameters []TFRequiredParameterSnapshot `json:"tf_required_parameters,omitempty"`
+	ContactDetails       *ContactData                  `json:"contact_details,omitempty"`
 }
 
 type TFRequiredParameterSnapshot struct {

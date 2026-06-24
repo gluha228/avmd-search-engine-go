@@ -6,10 +6,31 @@ import (
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+func (s *HttpServer) SubmitBookingContactDetails(
+	ctx context.Context,
+	request api.SubmitBookingContactDetailsRequestObject,
+) (api.SubmitBookingContactDetailsResponseObject, error) {
+	if request.Body == nil {
+		return api.SubmitBookingContactDetails400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: "request body is required"}}, nil
+	}
+	err := s.bookingService.SaveContactDetails(ctx, string(request.SearchId), mapBookingContactDetails(*request.Body))
+	if errors.Is(err, flightbooking.ErrInvalidRequest) {
+		return api.SubmitBookingContactDetails400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
+	}
+	if errors.Is(err, flightbooking.ErrNotFound) {
+		return api.SubmitBookingContactDetails404JSONResponse{NotFoundJSONResponse: api.NotFoundJSONResponse{Message: err.Error()}}, nil
+	}
+	if err != nil {
+		return api.SubmitBookingContactDetails500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
+	}
+	return api.SubmitBookingContactDetails204Response{}, nil
+}
 
 func (s *HttpServer) SubmitPassengerData(
 	ctx context.Context,
@@ -76,6 +97,16 @@ func mapPassengerDataRequest(src api.PassengerDataRequest) flightbooking.Passeng
 	}
 }
 
+func mapBookingContactDetails(src api.BookingContactDetails) flightsession.ContactData {
+	return flightsession.ContactData{
+		Email: string(src.Email),
+		Phone: flightsession.Phone{
+			InternationalCode: src.Phone.InternationalCode,
+			Number:            src.Phone.Number,
+		},
+	}
+}
+
 func mapSupplierParameters(src *[]api.CustomSupplierParameter) []flightsession.SupplierParameter {
 	if src == nil {
 		return nil
@@ -133,10 +164,25 @@ func (s *HttpServer) GetSelectedOffer(
 }
 
 func mapSelectedOffer(src flightbooking.SelectedOffer, offer flightbooking.EnrichedOffer) api.SelectedOffer {
-	return api.SelectedOffer{
+	result := api.SelectedOffer{
 		Offer:            mapAPIOffer(offer),
 		SearchParams:     mapAPIFlightSearchParams(src.SearchParams),
 		AdditionalFields: mapAPIAdditionalFields(src.AdditionalFields),
+	}
+	if src.ContactDetails != nil {
+		contactDetails := mapAPIContactDetails(*src.ContactDetails)
+		result.ContactDetails = &contactDetails
+	}
+	return result
+}
+
+func mapAPIContactDetails(src flightsession.ContactData) api.BookingContactDetails {
+	return api.BookingContactDetails{
+		Email: openapi_types.Email(strings.TrimSpace(src.Email)),
+		Phone: api.PassengerPhone{
+			InternationalCode: src.Phone.InternationalCode,
+			Number:            src.Phone.Number,
+		},
 	}
 }
 

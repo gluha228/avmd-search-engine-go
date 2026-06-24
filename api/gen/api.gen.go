@@ -134,6 +134,12 @@ type AirportRequest struct {
 	Lon      *float64 `json:"lon,omitempty"`
 }
 
+// BookingContactDetails defines model for BookingContactDetails.
+type BookingContactDetails struct {
+	Email openapi_types.Email `json:"email"`
+	Phone PassengerPhone      `json:"phone"`
+}
+
 // CalendarResponse defines model for CalendarResponse.
 type CalendarResponse struct {
 	Calendar []FlightDay `json:"calendar"`
@@ -372,9 +378,10 @@ type SegmentSeatMap struct {
 
 // SelectedOffer defines model for SelectedOffer.
 type SelectedOffer struct {
-	AdditionalFields []AdditionalField  `json:"additional_fields"`
-	Offer            Offer              `json:"offer"`
-	SearchParams     FlightSearchParams `json:"search_params"`
+	AdditionalFields []AdditionalField      `json:"additional_fields"`
+	ContactDetails   *BookingContactDetails `json:"contact_details,omitempty"`
+	Offer            Offer                  `json:"offer"`
+	SearchParams     FlightSearchParams     `json:"search_params"`
 }
 
 // AdultCountParam defines model for AdultCountParam.
@@ -476,6 +483,9 @@ type ReturnDateParam = openapi_types.Date
 // SearchIDParam defines model for SearchIDParam.
 type SearchIDParam = string
 
+// SearchIDPathParam defines model for SearchIDPathParam.
+type SearchIDPathParam = string
+
 // SearchParam defines model for SearchParam.
 type SearchParam = string
 
@@ -514,6 +524,12 @@ type GetAirportParams struct {
 
 // UpdateAirportParams defines parameters for UpdateAirport.
 type UpdateAirportParams struct {
+	// AcceptLanguage Language preference (en, ro, ru)
+	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
+}
+
+// SubmitBookingContactDetailsParams defines parameters for SubmitBookingContactDetails.
+type SubmitBookingContactDetailsParams struct {
 	// AcceptLanguage Language preference (en, ro, ru)
 	AcceptLanguage *LocaleHeaderParam `json:"Accept-Language,omitempty"`
 }
@@ -661,6 +677,9 @@ type CreateAirportJSONRequestBody = AirportRequest
 // UpdateAirportJSONRequestBody defines body for UpdateAirport for application/json ContentType.
 type UpdateAirportJSONRequestBody = AirportRequest
 
+// SubmitBookingContactDetailsJSONRequestBody defines body for SubmitBookingContactDetails for application/json ContentType.
+type SubmitBookingContactDetailsJSONRequestBody = BookingContactDetails
+
 // SubmitPassengerDataJSONRequestBody defines body for SubmitPassengerData for application/json ContentType.
 type SubmitPassengerDataJSONRequestBody = PassengerDataRequest
 
@@ -693,6 +712,9 @@ type ServerInterface interface {
 
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams)
+
+	// (POST /api/v1/booking/contact-details/{searchId})
+	SubmitBookingContactDetails(w http.ResponseWriter, r *http.Request, searchId SearchIDPathParam, params SubmitBookingContactDetailsParams)
 
 	// (POST /api/v1/booking/passenger-data)
 	SubmitPassengerData(w http.ResponseWriter, r *http.Request, params SubmitPassengerDataParams)
@@ -769,6 +791,11 @@ func (_ Unimplemented) GetAirport(w http.ResponseWriter, r *http.Request, id IDP
 
 // (PUT /api/v1/airports/{id})
 func (_ Unimplemented) UpdateAirport(w http.ResponseWriter, r *http.Request, id IDParam, params UpdateAirportParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (POST /api/v1/booking/contact-details/{searchId})
+func (_ Unimplemented) SubmitBookingContactDetails(w http.ResponseWriter, r *http.Request, searchId SearchIDPathParam, params SubmitBookingContactDetailsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1084,6 +1111,56 @@ func (siw *ServerInterfaceWrapper) UpdateAirport(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAirport(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitBookingContactDetails operation middleware
+func (siw *ServerInterfaceWrapper) SubmitBookingContactDetails(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "searchId" -------------
+	var searchId SearchIDPathParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "searchId", chi.URLParam(r, "searchId"), &searchId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "searchId", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubmitBookingContactDetailsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Accept-Language" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept-Language")]; found {
+		var AcceptLanguage LocaleHeaderParam
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Accept-Language", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept-Language", valueList[0], &AcceptLanguage, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Accept-Language", Err: err})
+			return
+		}
+
+		params.AcceptLanguage = &AcceptLanguage
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitBookingContactDetails(w, r, searchId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2400,6 +2477,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/api/v1/airports/{id}", wrapper.UpdateAirport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/booking/contact-details/{searchId}", wrapper.SubmitBookingContactDetails)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/api/v1/booking/passenger-data", wrapper.SubmitPassengerData)
 	})
 	r.Group(func(r chi.Router) {
@@ -2653,6 +2733,66 @@ func (response UpdateAirport404JSONResponse) VisitUpdateAirportResponse(w http.R
 type UpdateAirport500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateAirport500JSONResponse) VisitUpdateAirportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitBookingContactDetailsRequestObject struct {
+	SearchId SearchIDPathParam `json:"searchId"`
+	Params   SubmitBookingContactDetailsParams
+	Body     *SubmitBookingContactDetailsJSONRequestBody
+}
+
+type SubmitBookingContactDetailsResponseObject interface {
+	VisitSubmitBookingContactDetailsResponse(w http.ResponseWriter) error
+}
+
+type SubmitBookingContactDetails204Response struct {
+}
+
+func (response SubmitBookingContactDetails204Response) VisitSubmitBookingContactDetailsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SubmitBookingContactDetails400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SubmitBookingContactDetails400JSONResponse) VisitSubmitBookingContactDetailsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitBookingContactDetails404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SubmitBookingContactDetails404JSONResponse) VisitSubmitBookingContactDetailsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitBookingContactDetails500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SubmitBookingContactDetails500JSONResponse) VisitSubmitBookingContactDetailsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3468,6 +3608,9 @@ type StrictServerInterface interface {
 	// (PUT /api/v1/airports/{id})
 	UpdateAirport(ctx context.Context, request UpdateAirportRequestObject) (UpdateAirportResponseObject, error)
 
+	// (POST /api/v1/booking/contact-details/{searchId})
+	SubmitBookingContactDetails(ctx context.Context, request SubmitBookingContactDetailsRequestObject) (SubmitBookingContactDetailsResponseObject, error)
+
 	// (POST /api/v1/booking/passenger-data)
 	SubmitPassengerData(ctx context.Context, request SubmitPassengerDataRequestObject) (SubmitPassengerDataResponseObject, error)
 
@@ -3686,6 +3829,40 @@ func (sh *strictHandler) UpdateAirport(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateAirportResponseObject); ok {
 		if err := validResponse.VisitUpdateAirportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitBookingContactDetails operation middleware
+func (sh *strictHandler) SubmitBookingContactDetails(w http.ResponseWriter, r *http.Request, searchId SearchIDPathParam, params SubmitBookingContactDetailsParams) {
+	var request SubmitBookingContactDetailsRequestObject
+
+	request.SearchId = searchId
+	request.Params = params
+
+	var body SubmitBookingContactDetailsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitBookingContactDetails(ctx, request.(SubmitBookingContactDetailsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitBookingContactDetails")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitBookingContactDetailsResponseObject); ok {
+		if err := validResponse.VisitSubmitBookingContactDetailsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -83,6 +83,7 @@ func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string
 	return &SelectedOffer{
 		Offer:            offer,
 		SearchParams:     searchSession.Params,
+		ContactDetails:   searchSession.ContactDetails,
 		AdditionalFields: s.mapAdditionalFields(ctx, required),
 	}, nil
 }

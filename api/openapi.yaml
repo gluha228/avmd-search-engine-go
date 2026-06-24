@@ -13,6 +13,29 @@ tags:
   - name: Booking
 
 paths:
+  /api/v1/booking/contact-details/{searchId}:
+    parameters:
+      - $ref: "#/components/parameters/LocaleHeaderParam"
+    post:
+      tags: [Booking]
+      operationId: submitBookingContactDetails
+      parameters:
+        - $ref: "#/components/parameters/SearchIDPathParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingContactDetails"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /api/v1/booking/passenger-data:
     parameters:
       - $ref: "#/components/parameters/LocaleHeaderParam"
@@ -492,6 +515,12 @@ components:
       required: true
       schema:
         type: string
+    SearchIDPathParam:
+      name: searchId
+      in: path
+      required: true
+      schema:
+        type: string
         minLength: 1
     OfferIDParam:
       name: offerId
@@ -804,6 +833,15 @@ components:
           format: email
         phone:
           $ref: "#/components/schemas/PassengerPhone"
+    BookingContactDetails:
+      type: object
+      required: [email, phone]
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          $ref: "#/components/schemas/PassengerPhone"
     PassengerPhone:
       type: object
       required: [international_code, number]
@@ -906,6 +944,8 @@ components:
           $ref: "#/components/schemas/Offer"
         search_params:
           $ref: "#/components/schemas/FlightSearchParams"
+        contact_details:
+          $ref: "#/components/schemas/BookingContactDetails"
         additional_fields:
           type: array
           items:

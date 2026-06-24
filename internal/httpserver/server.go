@@ -12,6 +12,7 @@ import (
 	flightsearch "avmd-search-engine-go/internal/flights/search"
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/geo"
+	"avmd-search-engine-go/internal/googlesheets"
 	"avmd-search-engine-go/internal/redishealth"
 	"avmd-search-engine-go/internal/supplierroutes"
 	"avmd-search-engine-go/internal/travelfusion"
@@ -47,6 +48,9 @@ func NewHttpServer(cfg *config.Config, logger *slog.Logger) *HttpServer {
 }
 
 func (s *HttpServer) InitHandlers() error {
+	if err := s.cfg.Validate(); err != nil {
+		return err
+	}
 	tfClient := travelfusion.NewClient(travelfusion.Config{
 		BaseURL:             s.cfg.TFBaseURL,
 		XmlLoginID:          s.cfg.TFXmlLoginID,
@@ -123,6 +127,18 @@ func (s *HttpServer) InitHandlers() error {
 		s.logger,
 	)
 	s.bookingService.SetOperatorLogoURLPattern(s.cfg.TFOperatorLogoURLPattern)
+	if s.cfg.GoogleSheetsContactDetailsEnabled {
+		sink, err := googlesheets.NewContactDetailsSink(
+			context.Background(),
+			s.cfg.GoogleSheetsCredentialsFile,
+			s.cfg.GoogleSheetsSpreadsheetID,
+			s.cfg.GoogleSheetsContactDetailsRange,
+		)
+		if err != nil {
+			return err
+		}
+		s.bookingService.SetContactDetailsSink(sink)
+	}
 	return nil
 }
 
