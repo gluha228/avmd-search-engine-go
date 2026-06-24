@@ -346,10 +346,10 @@ type ProcessTermsSupplierResponse struct {
 
 // SeatDetail defines model for SeatDetail.
 type SeatDetail struct {
+	Available                  bool     `json:"available"`
 	Code                       string   `json:"code"`
 	Col                        int32    `json:"col"`
 	CurrencyCode               *string  `json:"currency_code,omitempty"`
-	IsAvailable                bool     `json:"is_available"`
 	NoInfantSeat               bool     `json:"no_infant_seat"`
 	PersonsWithReducedMobility bool     `json:"persons_with_reduced_mobility"`
 	Price                      *float64 `json:"price,omitempty"`

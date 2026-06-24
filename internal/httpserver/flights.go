@@ -145,7 +145,7 @@ func (response searchFlightsSSEResponse) VisitSearchFlightsResponse(w http.Respo
 	w.Header().Set("Connection", "keep-alive")
 	w.WriteHeader(http.StatusOK)
 
-	if err := writeSSE(w, flusher, "search_id", map[string]string{"search_id": searchID}); err != nil {
+	if err := writeSSE(w, flusher, "search_id", sseSearchID{SearchID: searchID}); err != nil {
 		return err
 	}
 
@@ -205,6 +205,10 @@ type sseOffer struct {
 	FareBand        sseFareBand        `json:"fare_band"`
 	Price           float64            `json:"price"`
 	PassengerPrices ssePassengerPrices `json:"passenger_prices"`
+}
+
+type sseSearchID struct {
+	SearchID string `json:"searchId"`
 }
 
 type ssePassengerPrices struct {

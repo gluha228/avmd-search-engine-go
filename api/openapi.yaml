@@ -870,7 +870,7 @@ components:
             $ref: "#/components/schemas/SeatDetail"
     SeatDetail:
       type: object
-      required: [code, type, row, col, is_available, persons_with_reduced_mobility, no_infant_seat]
+      required: [code, type, row, col, available, persons_with_reduced_mobility, no_infant_seat]
       properties:
         code:
           type: string
@@ -889,7 +889,7 @@ components:
         col:
           type: integer
           format: int32
-        is_available:
+        available:
           type: boolean
         persons_with_reduced_mobility:
           type: boolean

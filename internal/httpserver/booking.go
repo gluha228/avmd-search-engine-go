@@ -296,7 +296,7 @@ func mapAPISegmentSeatMaps(src []flightsession.SegmentSeatMap) []api.SegmentSeat
 				CurrencyCode:               src[i].Seats[j].CurrencyCode,
 				Row:                        int32(src[i].Seats[j].Row),
 				Col:                        int32(src[i].Seats[j].Col),
-				IsAvailable:                src[i].Seats[j].IsAvailable,
+				Available:                  src[i].Seats[j].IsAvailable,
 				PersonsWithReducedMobility: src[i].Seats[j].PersonsWithReducedMobility,
 				NoInfantSeat:               src[i].Seats[j].NoInfantSeat,
 			}
