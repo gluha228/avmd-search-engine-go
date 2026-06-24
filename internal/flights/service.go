@@ -368,6 +368,7 @@ func (s *Service) enrichOffer(offer Offer, airports map[string]FlightAirport) En
 		OfferID:        offer.OfferID,
 		OutboundFlight: s.enrichFlight(offer.OutboundFlight, airports),
 		CurrencyCode:   offer.CurrencyCode,
+		FareBand:       normalizeFareBand(offer.FareBand),
 		Price:          offer.Price,
 	}
 	if offer.InboundFlight != nil {
@@ -819,7 +820,97 @@ func buildOffer(outward travelfusion.Flight, inbound *travelfusion.Flight) Offer
 		OutboundFlight: outboundFlight,
 		InboundFlight:  inboundFlight,
 		CurrencyCode:   currency,
+		FareBand:       fareBand(outward, inbound),
 		Price:          price,
+	}
+}
+
+func fareBand(outward travelfusion.Flight, inbound *travelfusion.Flight) FareBand {
+	name := minimalFareBandName(outward, inbound)
+	if name == "" {
+		name = "Economy"
+	}
+	return FareBand{Name: name, Features: []string{}}
+}
+
+func normalizeFareBand(fareBand FareBand) FareBand {
+	if strings.TrimSpace(fareBand.Name) == "" {
+		fareBand.Name = "Economy"
+	}
+	if fareBand.Features == nil {
+		fareBand.Features = []string{}
+	}
+	return fareBand
+}
+
+func minimalFareBandName(outward travelfusion.Flight, inbound *travelfusion.Flight) string {
+	minClass := minimalKnownFlightClass(outward)
+	if inbound != nil {
+		minClass = lowerFlightClass(minClass, minimalKnownFlightClass(*inbound))
+	}
+	return flightClassName(minClass)
+}
+
+type flightClassRank int
+
+const (
+	unknownFlightClass      flightClassRank = -1
+	economyWithRestrictions flightClassRank = iota
+	economyWithoutRestrictions
+	economyPremium
+	business
+	first
+)
+
+func minimalKnownFlightClass(flight travelfusion.Flight) flightClassRank {
+	minClass := unknownFlightClass
+	for _, segment := range flight.Segments {
+		minClass = lowerFlightClass(minClass, parseFlightClass(segment.TravelClass))
+	}
+	return minClass
+}
+
+func lowerFlightClass(current, next flightClassRank) flightClassRank {
+	if next == unknownFlightClass {
+		return current
+	}
+	if current == unknownFlightClass || next < current {
+		return next
+	}
+	return current
+}
+
+func parseFlightClass(value string) flightClassRank {
+	switch strings.TrimSpace(value) {
+	case "Economy", "Economy With Restrictions":
+		return economyWithRestrictions
+	case "Economy Without Restrictions":
+		return economyWithoutRestrictions
+	case "Economy Premium":
+		return economyPremium
+	case "Business":
+		return business
+	case "First":
+		return first
+	default:
+		return unknownFlightClass
+	}
+}
+
+func flightClassName(rank flightClassRank) string {
+	switch rank {
+	case economyWithRestrictions:
+		return "Economy With Restrictions"
+	case economyWithoutRestrictions:
+		return "Economy Without Restrictions"
+	case economyPremium:
+		return "Economy Premium"
+	case business:
+		return "Business"
+	case first:
+		return "First"
+	default:
+		return ""
 	}
 }
 

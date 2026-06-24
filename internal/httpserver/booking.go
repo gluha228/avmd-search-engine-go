@@ -144,6 +144,7 @@ func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
 		OfferId:        src.OfferID,
 		OutboundFlight: mapAPIFlight(src.OutboundFlight),
 		CurrencyCode:   src.CurrencyCode,
+		FareBand:       mapAPIFareBand(src.FareBand),
 		Price:          src.Price,
 	}
 	if src.InboundFlight != nil {
@@ -153,6 +154,17 @@ func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
 	return offer
 }
 
+func mapAPIFareBand(src flights.FareBand) api.FareBand {
+	features := src.Features
+	if features == nil {
+		features = []string{}
+	}
+	return api.FareBand{
+		Name:     src.Name,
+		Features: features,
+	}
+}
+
 func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 	segments := make([]api.FlightSegment, len(src.Segments))
 	for i := range src.Segments {
@@ -160,18 +172,16 @@ func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 			SegmentId:              int32(src.Segments[i].SegmentID),
 			DepartureFlightAirport: mapAPIFlightAirport(src.Segments[i].DepartureFlightAirport),
 			ArrivalFlightAirport:   mapAPIFlightAirport(src.Segments[i].ArrivalFlightAirport),
-			DepartureTime:          src.Segments[i].DepartureTime,
-			ArrivalTime:            src.Segments[i].ArrivalTime,
+			DepartureTime:          formatLocalDateTime(src.Segments[i].DepartureTime),
+			ArrivalTime:            formatLocalDateTime(src.Segments[i].ArrivalTime),
 			DurationMinutes:        int32Ptr(src.Segments[i].DurationMinutes),
 			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
-			TravelClass:            stringPtr(src.Segments[i].TravelClass),
 		}
 	}
 	return api.Flight{
 		DepartureFlightAirport: mapAPIFlightAirport(src.DepartureFlightAirport),
 		ArrivalFlightAirport:   mapAPIFlightAirport(src.ArrivalFlightAirport),
 		SeatsAvailable:         int32(src.SeatsAvailable),
-		Price:                  src.Price,
 		Segments:               segments,
 	}
 }

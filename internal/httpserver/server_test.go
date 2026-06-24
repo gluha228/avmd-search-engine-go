@@ -219,7 +219,8 @@ func TestCORSDoesNotAllowUnknownOrigin(t *testing.T) {
 }
 
 func TestSearchFlightsStreamsSSE(t *testing.T) {
-	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+	tfLocation := time.FixedZone("TF", 3*60*60)
+	departure := time.Date(2026, 7, 2, 22, 30, 0, 0, tfLocation)
 	segmentArrival := departure.Add(90 * time.Minute)
 	store := &fakeSessionStore{searchID: "search-1"}
 	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -265,10 +266,16 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 		t.Fatalf("expected SSE content type, got %q", contentType)
 	}
 	body := recorder.Body.String()
-	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, "event: done\ndata: \n\n"} {
+	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, `"departure_time":"2026-07-02T22:30:00"`, "event: done\ndata: \n\n"} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected SSE body to contain %q, got %q", expected, body)
 		}
+	}
+	if strings.Contains(body, "+03:00") {
+		t.Fatalf("expected SSE segment times without timezone, got %q", body)
+	}
+	if strings.Contains(body, "travel_class") {
+		t.Fatalf("expected SSE segments not to expose travel_class, got %q", body)
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
@@ -460,6 +467,10 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 	searchParams := response["search_params"].(map[string]any)
 	if offer["offer_id"] != "TF-OUT1" || offer["price"] != float64(100) {
 		t.Fatalf("unexpected offer response: %s", recorder.Body.String())
+	}
+	outboundFlight := offer["outbound_flight"].(map[string]any)
+	if _, ok := outboundFlight["price"]; ok {
+		t.Fatalf("expected outbound_flight price to be omitted, got %s", recorder.Body.String())
 	}
 	if searchParams["departure_airport_code"] != "KIV" || searchParams["adult_count"] != float64(1) {
 		t.Fatalf("unexpected search params response: %s", recorder.Body.String())

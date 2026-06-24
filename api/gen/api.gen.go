@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
@@ -201,11 +200,16 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// FareBand defines model for FareBand.
+type FareBand struct {
+	Features []string `json:"features"`
+	Name     string   `json:"name"`
+}
+
 // Flight defines model for Flight.
 type Flight struct {
 	ArrivalFlightAirport   FlightAirport   `json:"arrival_flight_airport"`
 	DepartureFlightAirport FlightAirport   `json:"departure_flight_airport"`
-	Price                  float64         `json:"price"`
 	SeatsAvailable         int32           `json:"seats_available"`
 	Segments               []FlightSegment `json:"segments"`
 }
@@ -255,22 +259,22 @@ type FlightSearchParams struct {
 // FlightSegment defines model for FlightSegment.
 type FlightSegment struct {
 	ArrivalFlightAirport   FlightAirport `json:"arrival_flight_airport"`
-	ArrivalTime            *time.Time    `json:"arrival_time,omitempty"`
+	ArrivalTime            *string       `json:"arrival_time,omitempty"`
 	DepartureFlightAirport FlightAirport `json:"departure_flight_airport"`
-	DepartureTime          *time.Time    `json:"departure_time,omitempty"`
+	DepartureTime          *string       `json:"departure_time,omitempty"`
 	DurationMinutes        *int32        `json:"duration_minutes,omitempty"`
 	FlightNumber           *string       `json:"flight_number,omitempty"`
 	SegmentId              int32         `json:"segment_id"`
-	TravelClass            *string       `json:"travel_class,omitempty"`
 }
 
 // Offer defines model for Offer.
 type Offer struct {
-	CurrencyCode   string  `json:"currency_code"`
-	InboundFlight  *Flight `json:"inbound_flight,omitempty"`
-	OfferId        string  `json:"offer_id"`
-	OutboundFlight Flight  `json:"outbound_flight"`
-	Price          float64 `json:"price"`
+	CurrencyCode   string   `json:"currency_code"`
+	FareBand       FareBand `json:"fare_band"`
+	InboundFlight  *Flight  `json:"inbound_flight,omitempty"`
+	OfferId        string   `json:"offer_id"`
+	OutboundFlight Flight   `json:"outbound_flight"`
+	Price          float64  `json:"price"`
 }
 
 // PassengerContactData defines model for PassengerContactData.

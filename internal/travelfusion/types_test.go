@@ -292,7 +292,10 @@ func TestExtractFlights(t *testing.T) {
                     <ArriveDate>01/07/2026-09:30</ArriveDate>
                     <Duration>90</Duration>
                     <FlightId><Code>TF100</Code></FlightId>
-                    <TravelClass>Economy</TravelClass>
+                    <TravelClass>
+                      <TfClass>Economy With Restrictions</TfClass>
+                      <SupplierClass>PROMO</SupplierClass>
+                    </TravelClass>
                   </Segment>
                 </SegmentList>
               </Outward>
@@ -323,6 +326,46 @@ func TestExtractFlights(t *testing.T) {
 	}
 	if len(outward[0].Segments) != 1 || outward[0].Segments[0].FlightNumber != "TF100" {
 		t.Fatalf("unexpected segments: %+v", outward[0].Segments)
+	}
+	if outward[0].Segments[0].TravelClass != "Economy With Restrictions" || outward[0].MinimalTravelClass != "Economy With Restrictions" {
+		t.Fatalf("unexpected travel class: %+v", outward[0])
+	}
+}
+
+func TestExtractFlightsReadsTextTravelClass(t *testing.T) {
+	body := []byte(`<CommandList>
+  <CheckRouting>
+    <RouterList>
+      <Router>
+        <GroupList>
+          <Group>
+            <Price><Amount>100</Amount><Currency>EUR</Currency></Price>
+            <OutwardList>
+              <Outward>
+                <Id>OUT1</Id>
+                <SegmentList>
+                  <Segment>
+                    <Origin><Code>KIV</Code></Origin>
+                    <Destination><Code>OTP</Code></Destination>
+                    <TravelClass>Economy</TravelClass>
+                  </Segment>
+                </SegmentList>
+              </Outward>
+            </OutwardList>
+          </Group>
+        </GroupList>
+      </Router>
+    </RouterList>
+  </CheckRouting>
+</CommandList>`)
+
+	var resp commandListCheckRoutingResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	outward, _ := extractFlights(resp.CheckRouting)
+	if len(outward) != 1 || len(outward[0].Segments) != 1 || outward[0].Segments[0].TravelClass != "Economy" {
+		t.Fatalf("unexpected travel class: %+v", outward)
 	}
 }
 

@@ -63,7 +63,12 @@ type xmlSegment struct {
 	ArrivalRaw   string      `xml:"ArriveDate"`
 	Duration     int         `xml:"Duration"`
 	FlightID     flightID    `xml:"FlightId"`
-	TravelClass  string      `xml:"TravelClass"`
+	TravelClass  travelClass `xml:"TravelClass"`
+}
+
+type travelClass struct {
+	Value   string `xml:",chardata"`
+	TfClass string `xml:"TfClass"`
 }
 
 type xmlLocation struct {
@@ -117,7 +122,7 @@ func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn boo
 			ArrivalTime:     parseTFTime(segment.ArrivalRaw),
 			DurationMinutes: segment.Duration,
 			FlightNumber:    strings.TrimSpace(segment.FlightID.Code),
-			TravelClass:     strings.TrimSpace(segment.TravelClass),
+			TravelClass:     segment.TravelClass.value(),
 		})
 	}
 
@@ -182,6 +187,13 @@ func minimalTravelClass(segments []Segment) string {
 		}
 	}
 	return ""
+}
+
+func (c travelClass) value() string {
+	if strings.TrimSpace(c.TfClass) != "" {
+		return strings.TrimSpace(c.TfClass)
+	}
+	return strings.TrimSpace(c.Value)
 }
 
 func routingComplete(resp checkRoutingResponse) bool {

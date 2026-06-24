@@ -183,6 +183,89 @@ func TestSearchCreatesFlightSearchSession(t *testing.T) {
 	}
 }
 
+func TestSearchMapsFareBandFromMinimalTravelClass(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	flight := tfFlight("OUT1", "KIV", "OTP", departure, 100)
+	flight.Segments[0].TravelClass = "Business"
+	flight.Segments = append(flight.Segments, travelfusion.Segment{
+		Origin:          "OTP",
+		Destination:     "CDG",
+		DepartureTime:   departure.Add(2 * time.Hour),
+		ArrivalTime:     departure.Add(4 * time.Hour),
+		DurationMinutes: 120,
+		TravelClass:     "Economy Premium",
+	})
+	service := NewService(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID:      "RID",
+		OutwardFlights: []travelfusion.Flight{flight},
+	}}, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	response, err := service.SearchIntoSession(context.Background(), "search-1", SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	}, nil)
+	if err != nil {
+		t.Fatalf("SearchIntoSession returned error: %v", err)
+	}
+	if response.Offers[0].FareBand.Name != "Economy Premium" {
+		t.Fatalf("expected minimal fare band Economy Premium, got %+v", response.Offers[0].FareBand)
+	}
+	if response.Offers[0].FareBand.Features == nil || len(response.Offers[0].FareBand.Features) != 0 {
+		t.Fatalf("expected empty fare band features, got %+v", response.Offers[0].FareBand.Features)
+	}
+}
+
+func TestSearchDefaultsFareBandToEconomy(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	flight := tfFlight("OUT1", "KIV", "OTP", departure, 100)
+	flight.Segments[0].TravelClass = "Unknown Class"
+	service := NewService(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID:      "RID",
+		OutwardFlights: []travelfusion.Flight{flight},
+	}}, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	response, err := service.SearchIntoSession(context.Background(), "search-1", SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	}, nil)
+	if err != nil {
+		t.Fatalf("SearchIntoSession returned error: %v", err)
+	}
+	if response.Offers[0].FareBand.Name != "Economy" {
+		t.Fatalf("expected default fare band Economy, got %+v", response.Offers[0].FareBand)
+	}
+}
+
+func TestSearchTreatsEconomyTravelClassAsEconomyWithRestrictions(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	flight := tfFlight("OUT1", "KIV", "OTP", departure, 100)
+	flight.Segments[0].TravelClass = "Economy"
+	service := NewService(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID:      "RID",
+		OutwardFlights: []travelfusion.Flight{flight},
+	}}, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	response, err := service.SearchIntoSession(context.Background(), "search-1", SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	}, nil)
+	if err != nil {
+		t.Fatalf("SearchIntoSession returned error: %v", err)
+	}
+	if response.Offers[0].FareBand.Name != "Economy With Restrictions" {
+		t.Fatalf("expected canonical fare band Economy With Restrictions, got %+v", response.Offers[0].FareBand)
+	}
+}
+
 func TestSearchIntoSessionStreamEmitsOffersAsTravelfusionUpdatesArrive(t *testing.T) {
 	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	store := &fakeSessionStore{searchID: "search-1"}

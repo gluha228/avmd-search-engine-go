@@ -121,6 +121,7 @@ type Offer struct {
 	OutboundFlight Flight
 	InboundFlight  *Flight
 	CurrencyCode   string
+	FareBand       FareBand
 	Price          float64
 }
 
@@ -129,7 +130,13 @@ type EnrichedOffer struct {
 	OutboundFlight EnrichedFlight
 	InboundFlight  *EnrichedFlight
 	CurrencyCode   string
+	FareBand       FareBand
 	Price          float64
+}
+
+type FareBand struct {
+	Name     string
+	Features []string
 }
 
 type Flight struct {

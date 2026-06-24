@@ -1144,7 +1144,7 @@ components:
             $ref: "#/components/schemas/Offer"
     Offer:
       type: object
-      required: [offer_id, outbound_flight, currency_code, price]
+      required: [offer_id, outbound_flight, currency_code, fare_band, price]
       properties:
         offer_id:
           type: string
@@ -1154,12 +1154,24 @@ components:
           $ref: "#/components/schemas/Flight"
         currency_code:
           type: string
+        fare_band:
+          $ref: "#/components/schemas/FareBand"
         price:
           type: number
           format: double
+    FareBand:
+      type: object
+      required: [name, features]
+      properties:
+        name:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
     Flight:
       type: object
-      required: [departure_flight_airport, arrival_flight_airport, seats_available, segments, price]
+      required: [departure_flight_airport, arrival_flight_airport, seats_available, segments]
       properties:
         departure_flight_airport:
           $ref: "#/components/schemas/FlightAirport"
@@ -1168,9 +1180,6 @@ components:
         seats_available:
           type: integer
           format: int32
-        price:
-          type: number
-          format: double
         segments:
           type: array
           items:
@@ -1188,16 +1197,12 @@ components:
           $ref: "#/components/schemas/FlightAirport"
         departure_time:
           type: string
-          format: date-time
         arrival_time:
           type: string
-          format: date-time
         duration_minutes:
           type: integer
           format: int32
         flight_number:
-          type: string
-        travel_class:
           type: string
     FlightAirport:
       type: object

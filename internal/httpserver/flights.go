@@ -197,18 +197,23 @@ func writeSSEString(w http.ResponseWriter, flusher http.Flusher, event string, d
 }
 
 type sseOffer struct {
-	OfferID        string     `json:"offer_id"`
-	OutboundFlight sseFlight  `json:"outbound_flight"`
-	InboundFlight  *sseFlight `json:"inbound_flight,omitempty"`
-	CurrencyCode   string     `json:"currency_code"`
-	Price          float64    `json:"price"`
+	OfferID        string      `json:"offer_id"`
+	OutboundFlight sseFlight   `json:"outbound_flight"`
+	InboundFlight  *sseFlight  `json:"inbound_flight,omitempty"`
+	CurrencyCode   string      `json:"currency_code"`
+	FareBand       sseFareBand `json:"fare_band"`
+	Price          float64     `json:"price"`
+}
+
+type sseFareBand struct {
+	Name     string   `json:"name"`
+	Features []string `json:"features"`
 }
 
 type sseFlight struct {
 	DepartureFlightAirport sseFlightAirport `json:"departure_flight_airport"`
 	ArrivalFlightAirport   sseFlightAirport `json:"arrival_flight_airport"`
 	SeatsAvailable         int              `json:"seats_available"`
-	Price                  float64          `json:"price"`
 	Segments               []sseSegment     `json:"segments"`
 }
 
@@ -216,11 +221,10 @@ type sseSegment struct {
 	SegmentID              int              `json:"segment_id"`
 	DepartureFlightAirport sseFlightAirport `json:"departure_flight_airport"`
 	ArrivalFlightAirport   sseFlightAirport `json:"arrival_flight_airport"`
-	DepartureTime          *time.Time       `json:"departure_time,omitempty"`
-	ArrivalTime            *time.Time       `json:"arrival_time,omitempty"`
+	DepartureTime          *string          `json:"departure_time,omitempty"`
+	ArrivalTime            *string          `json:"arrival_time,omitempty"`
 	DurationMinutes        *int             `json:"duration_minutes,omitempty"`
 	FlightNumber           *string          `json:"flight_number,omitempty"`
-	TravelClass            *string          `json:"travel_class,omitempty"`
 }
 
 type sseFlightAirport struct {
@@ -235,6 +239,7 @@ func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 			OfferID:        src[i].OfferID,
 			OutboundFlight: mapFlight(src[i].OutboundFlight),
 			CurrencyCode:   src[i].CurrencyCode,
+			FareBand:       mapSSEFareBand(src[i].FareBand),
 			Price:          src[i].Price,
 		}
 		if src[i].InboundFlight != nil {
@@ -245,6 +250,17 @@ func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 	return offers
 }
 
+func mapSSEFareBand(src flights.FareBand) sseFareBand {
+	features := src.Features
+	if features == nil {
+		features = []string{}
+	}
+	return sseFareBand{
+		Name:     src.Name,
+		Features: features,
+	}
+}
+
 func mapFlight(src flights.EnrichedFlight) sseFlight {
 	segments := make([]sseSegment, len(src.Segments))
 	for i := range src.Segments {
@@ -252,18 +268,16 @@ func mapFlight(src flights.EnrichedFlight) sseFlight {
 			SegmentID:              src.Segments[i].SegmentID,
 			DepartureFlightAirport: mapSSEFlightAirport(src.Segments[i].DepartureFlightAirport),
 			ArrivalFlightAirport:   mapSSEFlightAirport(src.Segments[i].ArrivalFlightAirport),
-			DepartureTime:          src.Segments[i].DepartureTime,
-			ArrivalTime:            src.Segments[i].ArrivalTime,
+			DepartureTime:          formatLocalDateTime(src.Segments[i].DepartureTime),
+			ArrivalTime:            formatLocalDateTime(src.Segments[i].ArrivalTime),
 			DurationMinutes:        intPtr(src.Segments[i].DurationMinutes),
 			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
-			TravelClass:            stringPtr(src.Segments[i].TravelClass),
 		}
 	}
 	return sseFlight{
 		DepartureFlightAirport: mapSSEFlightAirport(src.DepartureFlightAirport),
 		ArrivalFlightAirport:   mapSSEFlightAirport(src.ArrivalFlightAirport),
 		SeatsAvailable:         src.SeatsAvailable,
-		Price:                  src.Price,
 		Segments:               segments,
 	}
 }
@@ -280,6 +294,14 @@ func intPtr(value int) *int {
 		return nil
 	}
 	return &value
+}
+
+func formatLocalDateTime(value *time.Time) *string {
+	if value == nil {
+		return nil
+	}
+	formatted := value.Format("2006-01-02T15:04:05")
+	return &formatted
 }
 
 func stringPtr(value string) *string {
