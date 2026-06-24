@@ -547,6 +547,52 @@ func TestSubmitBookingContactDetailsStoresSessionContactDetails(t *testing.T) {
 	}
 }
 
+func TestSubmitBookingContactDetailsRejectsBlankPhoneFields(t *testing.T) {
+	store := &fakeSessionStore{session: flights.FlightSearchSession{}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.bookingService = flightbooking.NewService(fakeTFClient{}, store, nil, nil, "", nil)
+
+	body := `{
+		"email":"user@example.com",
+		"phone":{"international_code":"","number":"69123456"}
+	}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/booking/contact-details/search-1", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "InternationalCode") {
+		t.Fatalf("expected phone field validation error, got %s", recorder.Body.String())
+	}
+}
+
+func TestSubmitBookingContactDetailsRejectsTooLongPhoneFields(t *testing.T) {
+	store := &fakeSessionStore{session: flights.FlightSearchSession{}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.bookingService = flightbooking.NewService(fakeTFClient{}, store, nil, nil, "", nil)
+
+	body := `{
+		"email":"user@example.com",
+		"phone":{"international_code":"+373000","number":"123456789012345"}
+	}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/booking/contact-details/search-1", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "InternationalCode") || !strings.Contains(recorder.Body.String(), "Number") {
+		t.Fatalf("expected both phone fields validation errors, got %s", recorder.Body.String())
+	}
+}
+
 func TestGetSelectedOfferLocalizesLuggageAdditionalFields(t *testing.T) {
 	departure := time.Date(2026, 7, 2, 8, 30, 0, 0, time.UTC)
 	store := &fakeSessionStore{session: flights.FlightSearchSession{

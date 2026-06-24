@@ -41,12 +41,6 @@ func validateContactDetails(details session.ContactData) error {
 	if strings.TrimSpace(details.Email) == "" {
 		return fmt.Errorf("%w: email is required", ErrInvalidRequest)
 	}
-	if strings.TrimSpace(details.Phone.InternationalCode) == "" {
-		return fmt.Errorf("%w: phone.international_code is required", ErrInvalidRequest)
-	}
-	if strings.TrimSpace(details.Phone.Number) == "" {
-		return fmt.Errorf("%w: phone.number is required", ErrInvalidRequest)
-	}
 	return nil
 }
 

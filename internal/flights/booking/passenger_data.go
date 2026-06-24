@@ -246,9 +246,6 @@ func validatePassengerData(req PassengerDataRequest, searchSession *session.Flig
 	if strings.TrimSpace(req.ContactData.Email) == "" {
 		return fmt.Errorf("%w: contact_data.email is required", ErrInvalidRequest)
 	}
-	if strings.TrimSpace(req.ContactData.Phone.InternationalCode) == "" || strings.TrimSpace(req.ContactData.Phone.Number) == "" {
-		return fmt.Errorf("%w: contact_data.phone is required", ErrInvalidRequest)
-	}
 	for i := range req.Passengers {
 		passenger := req.Passengers[i]
 		if normalizeTitle(passenger.Title) == "" {

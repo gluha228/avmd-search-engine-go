@@ -849,9 +849,15 @@ components:
         international_code:
           type: string
           minLength: 1
+          maxLength: 5
+          x-oapi-codegen-extra-tags:
+            validate: required,min=1,max=5
         number:
           type: string
           minLength: 1
+          maxLength: 14
+          x-oapi-codegen-extra-tags:
+            validate: required,min=1,max=14
     CustomSupplierParameter:
       type: object
       required: [param_name, param_value]

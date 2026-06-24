@@ -19,6 +19,9 @@ func (s *HttpServer) SubmitBookingContactDetails(
 	if request.Body == nil {
 		return api.SubmitBookingContactDetails400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: "request body is required"}}, nil
 	}
+	if err := s.validator.Struct(request.Body); err != nil {
+		return api.SubmitBookingContactDetails400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
+	}
 	err := s.bookingService.SaveContactDetails(ctx, string(request.SearchId), mapBookingContactDetails(*request.Body))
 	if errors.Is(err, flightbooking.ErrInvalidRequest) {
 		return api.SubmitBookingContactDetails400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
@@ -38,6 +41,9 @@ func (s *HttpServer) SubmitPassengerData(
 ) (api.SubmitPassengerDataResponseObject, error) {
 	if request.Body == nil {
 		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: "request body is required"}}, nil
+	}
+	if err := s.validator.Struct(request.Body); err != nil {
+		return api.SubmitPassengerData400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
 	}
 	serviceReq := mapPassengerDataRequest(*request.Body)
 	response, err := s.bookingService.ProcessPassengerData(ctx, serviceReq)

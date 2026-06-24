@@ -332,8 +332,8 @@ type PassengerDataResponse struct {
 
 // PassengerPhone defines model for PassengerPhone.
 type PassengerPhone struct {
-	InternationalCode string `json:"international_code"`
-	Number            string `json:"number"`
+	InternationalCode string `json:"international_code" validate:"required,min=1,max=5"`
+	Number            string `json:"number" validate:"required,min=1,max=14"`
 }
 
 // PassengerPrices defines model for PassengerPrices.
