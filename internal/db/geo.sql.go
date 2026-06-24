@@ -284,6 +284,45 @@ func (q *Queries) GetCountry(ctx context.Context, id int64) (Country, error) {
 	return i, err
 }
 
+const getFlightAirportsByIATACodes = `-- name: GetFlightAirportsByIATACodes :many
+SELECT
+    a.iata_code::text AS code,
+    (CASE WHEN $1::text = 'ru' THEN c.name_ru WHEN $1::text = 'ro' THEN c.name_ro ELSE c.name_en END)::text AS city_name
+FROM airports a
+JOIN cities c ON c.id = a.city_id
+WHERE a.iata_code = ANY($2::text[])
+`
+
+type GetFlightAirportsByIATACodesParams struct {
+	Locale    string
+	IataCodes []string
+}
+
+type GetFlightAirportsByIATACodesRow struct {
+	Code     string
+	CityName string
+}
+
+func (q *Queries) GetFlightAirportsByIATACodes(ctx context.Context, arg GetFlightAirportsByIATACodesParams) ([]GetFlightAirportsByIATACodesRow, error) {
+	rows, err := q.db.Query(ctx, getFlightAirportsByIATACodes, arg.Locale, arg.IataCodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFlightAirportsByIATACodesRow
+	for rows.Next() {
+		var i GetFlightAirportsByIATACodesRow
+		if err := rows.Scan(&i.Code, &i.CityName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAirports = `-- name: ListAirports :many
 SELECT id, city_id, iata_code, icao_code, lat, lon
 FROM airports

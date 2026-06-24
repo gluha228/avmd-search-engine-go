@@ -54,6 +54,11 @@ type fakeCalendarPriceStore struct {
 	err     error
 }
 
+type fakeFlightAirportLookup struct {
+	locale   string
+	airports map[string]flights.FlightAirport
+}
+
 func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearchSession) (string, error) {
 	f.session = session
 	return f.searchID, f.err
@@ -85,6 +90,11 @@ func (f *fakeCalendarPriceStore) GetMinPrice(_ context.Context, origin, destinat
 func (f *fakeCalendarPriceStore) SetMinPriceIfLower(_ context.Context, origin, destination string, date time.Time, entry calendar.PriceEntry) error {
 	f.entries[origin+":"+destination+":"+date.Format(time.DateOnly)] = entry
 	return nil
+}
+
+func (f *fakeFlightAirportLookup) FlightAirportsByIATACodes(_ context.Context, _ []string, locale string) (map[string]flights.FlightAirport, error) {
+	f.locale = locale
+	return f.airports, nil
 }
 
 func TestOpenAPISpecEndpoint(t *testing.T) {
@@ -262,6 +272,62 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
+	}
+}
+
+func TestSearchFlightsStreamsLocalizedAirportObjects(t *testing.T) {
+	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1"}
+	lookup := &fakeFlightAirportLookup{airports: map[string]flights.FlightAirport{
+		"KIV": {Code: "KIV", CityName: "Кишинев"},
+		"OTP": {Code: "OTP", CityName: "Бухарест"},
+	}}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithAirportLookup(fakeTFClient{result: &travelfusion.SearchResult{
+		RoutingID: "RID",
+		OutwardFlights: []travelfusion.Flight{
+			{
+				ID:            "OUT1",
+				Origin:        "KIV",
+				Destination:   "OTP",
+				DepartureTime: departure,
+				ArrivalTime:   departure.Add(90 * time.Minute),
+				Price:         100,
+				Currency:      "EUR",
+				Segments: []travelfusion.Segment{{
+					Origin:        "KIV",
+					Destination:   "OTP",
+					DepartureTime: departure,
+					ArrivalTime:   departure.Add(90 * time.Minute),
+				}},
+			},
+		},
+	}}, store, nil, nil, lookup, "EUR", nil)
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/flights/search?departureAirportCode=KIV&arrivalAirportCode=OTP&departureDate=2026-07-02&adultCount=1",
+		nil,
+	)
+	request.Header.Set("Accept-Language", "ru")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	body := recorder.Body.String()
+	for _, expected := range []string{`"departure_flight_airport":{"code":"KIV","city_name":"Кишинев"}`, `"arrival_flight_airport":{"code":"OTP","city_name":"Бухарест"}`} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected SSE body to contain %q, got %s", expected, body)
+		}
+	}
+	if lookup.locale != "ru" {
+		t.Fatalf("expected Accept-Language to be used for airport lookup, got %q", lookup.locale)
+	}
+	if store.session.TFOffers[0].OutboundFlight.DepartureAirportCode != "KIV" {
+		t.Fatalf("expected cached offer to keep airport codes, got %+v", store.session.TFOffers[0])
 	}
 }
 

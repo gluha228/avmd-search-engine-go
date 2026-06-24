@@ -97,11 +97,16 @@ func (s *HttpServer) InitHandlers() error {
 		s.geoService = geo.NewServiceWithRouteProvider(geo.NewSQLCRepository(db), s.routeService)
 	}
 	s.calendarService = calendar.NewService(priceStore, s.cfg.DefaultCurrencyCode, s.currencyService, s.logger)
-	s.flightService = flights.NewServiceWithBookingDependencies(
+	var airportLookup flights.FlightAirportLookup
+	if err == nil {
+		airportLookup = flights.NewSQLCAirportLookup(db)
+	}
+	s.flightService = flights.NewServiceWithAirportLookup(
 		tfClient,
 		sessionStore,
 		s.calendarService,
 		s.currencyService,
+		airportLookup,
 		s.cfg.DefaultCurrencyCode,
 		s.logger,
 	)

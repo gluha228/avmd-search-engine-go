@@ -203,11 +203,17 @@ type Error struct {
 
 // Flight defines model for Flight.
 type Flight struct {
-	ArrivalAirportCode   string          `json:"arrival_airport_code"`
-	DepartureAirportCode string          `json:"departure_airport_code"`
-	Price                float64         `json:"price"`
-	SeatsAvailable       int32           `json:"seats_available"`
-	Segments             []FlightSegment `json:"segments"`
+	ArrivalFlightAirport   FlightAirport   `json:"arrival_flight_airport"`
+	DepartureFlightAirport FlightAirport   `json:"departure_flight_airport"`
+	Price                  float64         `json:"price"`
+	SeatsAvailable         int32           `json:"seats_available"`
+	Segments               []FlightSegment `json:"segments"`
+}
+
+// FlightAirport defines model for FlightAirport.
+type FlightAirport struct {
+	CityName string `json:"city_name"`
+	Code     string `json:"code"`
 }
 
 // FlightDay defines model for FlightDay.
@@ -248,14 +254,14 @@ type FlightSearchParams struct {
 
 // FlightSegment defines model for FlightSegment.
 type FlightSegment struct {
-	ArrivalAirportCode   string     `json:"arrival_airport_code"`
-	ArrivalTime          *time.Time `json:"arrival_time,omitempty"`
-	DepartureAirportCode string     `json:"departure_airport_code"`
-	DepartureTime        *time.Time `json:"departure_time,omitempty"`
-	DurationMinutes      *int32     `json:"duration_minutes,omitempty"`
-	FlightNumber         *string    `json:"flight_number,omitempty"`
-	SegmentId            int32      `json:"segment_id"`
-	TravelClass          *string    `json:"travel_class,omitempty"`
+	ArrivalFlightAirport   FlightAirport `json:"arrival_flight_airport"`
+	ArrivalTime            *time.Time    `json:"arrival_time,omitempty"`
+	DepartureFlightAirport FlightAirport `json:"departure_flight_airport"`
+	DepartureTime          *time.Time    `json:"departure_time,omitempty"`
+	DurationMinutes        *int32        `json:"duration_minutes,omitempty"`
+	FlightNumber           *string       `json:"flight_number,omitempty"`
+	SegmentId              int32         `json:"segment_id"`
+	TravelClass            *string       `json:"travel_class,omitempty"`
 }
 
 // Offer defines model for Offer.

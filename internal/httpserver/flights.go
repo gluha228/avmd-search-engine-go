@@ -148,6 +148,7 @@ func (response searchFlightsSSEResponse) VisitSearchFlightsResponse(w http.Respo
 		return err
 	}
 
+	locale := localeFromContext(response.ctx)
 	for update := range response.service.SearchIntoSessionStream(response.ctx, searchID, response.request) {
 		if update.Err != nil {
 			_ = writeSSE(w, flusher, "error", map[string]string{"message": update.Err.Error()})
@@ -156,7 +157,12 @@ func (response searchFlightsSSEResponse) VisitSearchFlightsResponse(w http.Respo
 		if len(update.Offers) == 0 {
 			continue
 		}
-		if err := writeSSE(w, flusher, "offers", mapOffers(update.Offers)); err != nil {
+		enrichedOffers, err := response.service.EnrichSearchOffers(response.ctx, update.Offers, locale)
+		if err != nil {
+			_ = writeSSE(w, flusher, "error", map[string]string{"message": err.Error()})
+			return nil
+		}
+		if err := writeSSE(w, flusher, "offers", mapOffers(enrichedOffers)); err != nil {
 			return err
 		}
 	}
@@ -199,25 +205,30 @@ type sseOffer struct {
 }
 
 type sseFlight struct {
-	DepartureAirportCode string       `json:"departure_airport_code"`
-	ArrivalAirportCode   string       `json:"arrival_airport_code"`
-	SeatsAvailable       int          `json:"seats_available"`
-	Price                float64      `json:"price"`
-	Segments             []sseSegment `json:"segments"`
+	DepartureFlightAirport sseFlightAirport `json:"departure_flight_airport"`
+	ArrivalFlightAirport   sseFlightAirport `json:"arrival_flight_airport"`
+	SeatsAvailable         int              `json:"seats_available"`
+	Price                  float64          `json:"price"`
+	Segments               []sseSegment     `json:"segments"`
 }
 
 type sseSegment struct {
-	SegmentID            int        `json:"segment_id"`
-	DepartureAirportCode string     `json:"departure_airport_code"`
-	ArrivalAirportCode   string     `json:"arrival_airport_code"`
-	DepartureTime        *time.Time `json:"departure_time,omitempty"`
-	ArrivalTime          *time.Time `json:"arrival_time,omitempty"`
-	DurationMinutes      *int       `json:"duration_minutes,omitempty"`
-	FlightNumber         *string    `json:"flight_number,omitempty"`
-	TravelClass          *string    `json:"travel_class,omitempty"`
+	SegmentID              int              `json:"segment_id"`
+	DepartureFlightAirport sseFlightAirport `json:"departure_flight_airport"`
+	ArrivalFlightAirport   sseFlightAirport `json:"arrival_flight_airport"`
+	DepartureTime          *time.Time       `json:"departure_time,omitempty"`
+	ArrivalTime            *time.Time       `json:"arrival_time,omitempty"`
+	DurationMinutes        *int             `json:"duration_minutes,omitempty"`
+	FlightNumber           *string          `json:"flight_number,omitempty"`
+	TravelClass            *string          `json:"travel_class,omitempty"`
 }
 
-func mapOffers(src []flights.Offer) []sseOffer {
+type sseFlightAirport struct {
+	Code     string `json:"code"`
+	CityName string `json:"city_name"`
+}
+
+func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 	offers := make([]sseOffer, len(src))
 	for i := range src {
 		offers[i] = sseOffer{
@@ -234,26 +245,33 @@ func mapOffers(src []flights.Offer) []sseOffer {
 	return offers
 }
 
-func mapFlight(src flights.Flight) sseFlight {
+func mapFlight(src flights.EnrichedFlight) sseFlight {
 	segments := make([]sseSegment, len(src.Segments))
 	for i := range src.Segments {
 		segments[i] = sseSegment{
-			SegmentID:            src.Segments[i].SegmentID,
-			DepartureAirportCode: src.Segments[i].DepartureAirportCode,
-			ArrivalAirportCode:   src.Segments[i].ArrivalAirportCode,
-			DepartureTime:        src.Segments[i].DepartureTime,
-			ArrivalTime:          src.Segments[i].ArrivalTime,
-			DurationMinutes:      intPtr(src.Segments[i].DurationMinutes),
-			FlightNumber:         stringPtr(src.Segments[i].FlightNumber),
-			TravelClass:          stringPtr(src.Segments[i].TravelClass),
+			SegmentID:              src.Segments[i].SegmentID,
+			DepartureFlightAirport: mapSSEFlightAirport(src.Segments[i].DepartureFlightAirport),
+			ArrivalFlightAirport:   mapSSEFlightAirport(src.Segments[i].ArrivalFlightAirport),
+			DepartureTime:          src.Segments[i].DepartureTime,
+			ArrivalTime:            src.Segments[i].ArrivalTime,
+			DurationMinutes:        intPtr(src.Segments[i].DurationMinutes),
+			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
+			TravelClass:            stringPtr(src.Segments[i].TravelClass),
 		}
 	}
 	return sseFlight{
-		DepartureAirportCode: src.DepartureAirportCode,
-		ArrivalAirportCode:   src.ArrivalAirportCode,
-		SeatsAvailable:       src.SeatsAvailable,
-		Price:                src.Price,
-		Segments:             segments,
+		DepartureFlightAirport: mapSSEFlightAirport(src.DepartureFlightAirport),
+		ArrivalFlightAirport:   mapSSEFlightAirport(src.ArrivalFlightAirport),
+		SeatsAvailable:         src.SeatsAvailable,
+		Price:                  src.Price,
+		Segments:               segments,
+	}
+}
+
+func mapSSEFlightAirport(src flights.FlightAirport) sseFlightAirport {
+	return sseFlightAirport{
+		Code:     src.Code,
+		CityName: src.CityName,
 	}
 }
 

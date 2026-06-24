@@ -112,7 +112,8 @@ func (s *HttpServer) GetSelectedOffer(
 	ctx context.Context,
 	request api.GetSelectedOfferRequestObject,
 ) (api.GetSelectedOfferResponseObject, error) {
-	ctx = flights.WithLocale(ctx, localeFromContext(ctx))
+	locale := localeFromContext(ctx)
+	ctx = flights.WithLocale(ctx, locale)
 	selectedOffer, err := s.flightService.GetSelectedOffer(ctx, request.Params.SearchId, request.Params.OfferId)
 	if errors.Is(err, flights.ErrInvalidRequest) {
 		return api.GetSelectedOffer400JSONResponse{BadRequestJSONResponse: api.BadRequestJSONResponse{Message: err.Error()}}, nil
@@ -123,18 +124,22 @@ func (s *HttpServer) GetSelectedOffer(
 	if err != nil {
 		return api.GetSelectedOffer500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
 	}
-	return api.GetSelectedOffer200JSONResponse(mapSelectedOffer(*selectedOffer)), nil
+	enrichedOffer, err := s.flightService.EnrichOffer(ctx, selectedOffer.Offer, locale)
+	if err != nil {
+		return api.GetSelectedOffer500JSONResponse{InternalErrorJSONResponse: api.InternalErrorJSONResponse{Message: err.Error()}}, nil
+	}
+	return api.GetSelectedOffer200JSONResponse(mapSelectedOffer(*selectedOffer, enrichedOffer)), nil
 }
 
-func mapSelectedOffer(src flights.SelectedOffer) api.SelectedOffer {
+func mapSelectedOffer(src flights.SelectedOffer, offer flights.EnrichedOffer) api.SelectedOffer {
 	return api.SelectedOffer{
-		Offer:            mapAPIOffer(src.Offer),
+		Offer:            mapAPIOffer(offer),
 		SearchParams:     mapAPIFlightSearchParams(src.SearchParams),
 		AdditionalFields: mapAPIAdditionalFields(src.AdditionalFields),
 	}
 }
 
-func mapAPIOffer(src flights.Offer) api.Offer {
+func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
 	offer := api.Offer{
 		OfferId:        src.OfferID,
 		OutboundFlight: mapAPIFlight(src.OutboundFlight),
@@ -148,26 +153,33 @@ func mapAPIOffer(src flights.Offer) api.Offer {
 	return offer
 }
 
-func mapAPIFlight(src flights.Flight) api.Flight {
+func mapAPIFlight(src flights.EnrichedFlight) api.Flight {
 	segments := make([]api.FlightSegment, len(src.Segments))
 	for i := range src.Segments {
 		segments[i] = api.FlightSegment{
-			SegmentId:            int32(src.Segments[i].SegmentID),
-			DepartureAirportCode: src.Segments[i].DepartureAirportCode,
-			ArrivalAirportCode:   src.Segments[i].ArrivalAirportCode,
-			DepartureTime:        src.Segments[i].DepartureTime,
-			ArrivalTime:          src.Segments[i].ArrivalTime,
-			DurationMinutes:      int32Ptr(src.Segments[i].DurationMinutes),
-			FlightNumber:         stringPtr(src.Segments[i].FlightNumber),
-			TravelClass:          stringPtr(src.Segments[i].TravelClass),
+			SegmentId:              int32(src.Segments[i].SegmentID),
+			DepartureFlightAirport: mapAPIFlightAirport(src.Segments[i].DepartureFlightAirport),
+			ArrivalFlightAirport:   mapAPIFlightAirport(src.Segments[i].ArrivalFlightAirport),
+			DepartureTime:          src.Segments[i].DepartureTime,
+			ArrivalTime:            src.Segments[i].ArrivalTime,
+			DurationMinutes:        int32Ptr(src.Segments[i].DurationMinutes),
+			FlightNumber:           stringPtr(src.Segments[i].FlightNumber),
+			TravelClass:            stringPtr(src.Segments[i].TravelClass),
 		}
 	}
 	return api.Flight{
-		DepartureAirportCode: src.DepartureAirportCode,
-		ArrivalAirportCode:   src.ArrivalAirportCode,
-		SeatsAvailable:       int32(src.SeatsAvailable),
-		Price:                src.Price,
-		Segments:             segments,
+		DepartureFlightAirport: mapAPIFlightAirport(src.DepartureFlightAirport),
+		ArrivalFlightAirport:   mapAPIFlightAirport(src.ArrivalFlightAirport),
+		SeatsAvailable:         int32(src.SeatsAvailable),
+		Price:                  src.Price,
+		Segments:               segments,
+	}
+}
+
+func mapAPIFlightAirport(src flights.FlightAirport) api.FlightAirport {
+	return api.FlightAirport{
+		Code:     src.Code,
+		CityName: src.CityName,
 	}
 }
 

@@ -124,12 +124,33 @@ type Offer struct {
 	Price          float64
 }
 
+type EnrichedOffer struct {
+	OfferID        string
+	OutboundFlight EnrichedFlight
+	InboundFlight  *EnrichedFlight
+	CurrencyCode   string
+	Price          float64
+}
+
 type Flight struct {
 	DepartureAirportCode string
 	ArrivalAirportCode   string
 	SeatsAvailable       int
 	Price                float64
 	Segments             []Segment
+}
+
+type EnrichedFlight struct {
+	DepartureFlightAirport FlightAirport
+	ArrivalFlightAirport   FlightAirport
+	SeatsAvailable         int
+	Price                  float64
+	Segments               []EnrichedSegment
+}
+
+type FlightAirport struct {
+	Code     string
+	CityName string
 }
 
 type Segment struct {
@@ -141,6 +162,17 @@ type Segment struct {
 	DurationMinutes      int
 	FlightNumber         string
 	TravelClass          string
+}
+
+type EnrichedSegment struct {
+	SegmentID              int
+	DepartureFlightAirport FlightAirport
+	ArrivalFlightAirport   FlightAirport
+	DepartureTime          *time.Time
+	ArrivalTime            *time.Time
+	DurationMinutes        int
+	FlightNumber           string
+	TravelClass            string
 }
 
 type FlightSearchSession struct {

@@ -99,3 +99,11 @@ ORDER BY
     c.population DESC NULLS LAST,
     c.is_capital DESC
 LIMIT @limit_rows::bigint;
+
+-- name: GetFlightAirportsByIATACodes :many
+SELECT
+    a.iata_code::text AS code,
+    (CASE WHEN @locale::text = 'ru' THEN c.name_ru WHEN @locale::text = 'ro' THEN c.name_ro ELSE c.name_en END)::text AS city_name
+FROM airports a
+JOIN cities c ON c.id = a.city_id
+WHERE a.iata_code = ANY(@iata_codes::text[]);

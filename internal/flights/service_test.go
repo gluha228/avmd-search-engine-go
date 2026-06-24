@@ -38,6 +38,13 @@ type fakeCurrencyConverter struct {
 	err     error
 }
 
+type fakeAirportLookup struct {
+	locale   string
+	codes    []string
+	airports map[string]FlightAirport
+	err      error
+}
+
 type currencyConversionCall struct {
 	amount float64
 	from   string
@@ -108,6 +115,15 @@ func (f *fakeCurrencyConverter) Convert(_ context.Context, amount float64, from,
 		return f.result, nil
 	}
 	return amount, nil
+}
+
+func (f *fakeAirportLookup) FlightAirportsByIATACodes(_ context.Context, codes []string, locale string) (map[string]FlightAirport, error) {
+	f.codes = codes
+	f.locale = locale
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.airports, nil
 }
 
 func TestSearchOneWayFiltersToDepartureDate(t *testing.T) {
@@ -197,6 +213,95 @@ func TestSearchIntoSessionStreamEmitsOffersAsTravelfusionUpdatesArrive(t *testin
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 2 {
 		t.Fatalf("expected final session to contain two offers, got %+v", store.session)
+	}
+}
+
+func TestEnrichOffersUsesLocalizedAirportNamesWithoutMutatingCachedOffer(t *testing.T) {
+	lookup := &fakeAirportLookup{airports: map[string]FlightAirport{
+		"KIV": {Code: "KIV", CityName: "Кишинев"},
+		"OTP": {Code: "OTP", CityName: "Бухарест"},
+	}}
+	service := NewServiceWithAirportLookup(fakeTFClient{}, nil, nil, nil, lookup, "EUR", nil)
+	offer := Offer{
+		OfferID: "TF-OUT1",
+		OutboundFlight: Flight{
+			DepartureAirportCode: "KIV",
+			ArrivalAirportCode:   "OTP",
+			Segments: []Segment{{
+				SegmentID:            1,
+				DepartureAirportCode: "KIV",
+				ArrivalAirportCode:   "OTP",
+			}},
+		},
+	}
+
+	enriched, err := service.EnrichOffers(context.Background(), []Offer{offer}, "ru-RU")
+	if err != nil {
+		t.Fatalf("EnrichOffers returned error: %v", err)
+	}
+	if lookup.locale != "ru-RU" {
+		t.Fatalf("expected locale to be passed through, got %q", lookup.locale)
+	}
+	if enriched[0].OutboundFlight.DepartureFlightAirport.CityName != "Кишинев" {
+		t.Fatalf("expected localized departure city, got %+v", enriched[0].OutboundFlight.DepartureFlightAirport)
+	}
+	if enriched[0].OutboundFlight.Segments[0].ArrivalFlightAirport.CityName != "Бухарест" {
+		t.Fatalf("expected localized segment arrival city, got %+v", enriched[0].OutboundFlight.Segments[0].ArrivalFlightAirport)
+	}
+	if offer.OutboundFlight.DepartureAirportCode != "KIV" || offer.OutboundFlight.ArrivalAirportCode != "OTP" {
+		t.Fatalf("cached offer airport codes were mutated: %+v", offer.OutboundFlight)
+	}
+}
+
+func TestEnrichSearchOffersConvertsPricesToDefaultCurrencyWithoutMutatingCachedOffer(t *testing.T) {
+	converter := &fakeCurrencyConverter{results: []float64{90, 45}}
+	service := NewServiceWithBookingDependencies(fakeTFClient{}, nil, nil, converter, "EUR", nil)
+	inbound := Flight{Price: 50}
+	offer := Offer{
+		OfferID:        "TF-OUT1-RET1",
+		CurrencyCode:   "USD",
+		Price:          150,
+		OutboundFlight: Flight{Price: 100},
+		InboundFlight:  &inbound,
+	}
+
+	enriched, err := service.EnrichSearchOffers(context.Background(), []Offer{offer}, "en")
+	if err != nil {
+		t.Fatalf("EnrichSearchOffers returned error: %v", err)
+	}
+	if enriched[0].CurrencyCode != "EUR" || enriched[0].Price != 135 {
+		t.Fatalf("expected enriched offer converted to EUR, got %+v", enriched[0])
+	}
+	if enriched[0].OutboundFlight.Price != 90 || enriched[0].InboundFlight.Price != 45 {
+		t.Fatalf("expected flight prices converted, got %+v", enriched[0])
+	}
+	if offer.CurrencyCode != "USD" || offer.Price != 150 || offer.OutboundFlight.Price != 100 || offer.InboundFlight.Price != 50 {
+		t.Fatalf("expected cached/raw offer not to mutate, got %+v", offer)
+	}
+	if len(converter.calls) != 2 || converter.calls[0].from != "USD" || converter.calls[0].to != "EUR" {
+		t.Fatalf("unexpected currency conversion calls: %+v", converter.calls)
+	}
+}
+
+func TestEnrichOfferDoesNotConvertAlreadyNormalizedSelectedOffer(t *testing.T) {
+	converter := &fakeCurrencyConverter{result: 999}
+	service := NewServiceWithBookingDependencies(fakeTFClient{}, nil, nil, converter, "EUR", nil)
+	offer := Offer{
+		OfferID:        "TF-OUT1",
+		CurrencyCode:   "EUR",
+		Price:          100,
+		OutboundFlight: Flight{Price: 100},
+	}
+
+	enriched, err := service.EnrichOffer(context.Background(), offer, "en")
+	if err != nil {
+		t.Fatalf("EnrichOffer returned error: %v", err)
+	}
+	if enriched.CurrencyCode != "EUR" || enriched.Price != 100 || enriched.OutboundFlight.Price != 100 {
+		t.Fatalf("expected selected offer enrichment without conversion, got %+v", enriched)
+	}
+	if len(converter.calls) != 0 {
+		t.Fatalf("expected no currency conversion during EnrichOffer, got %+v", converter.calls)
 	}
 }
 

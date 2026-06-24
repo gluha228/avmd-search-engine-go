@@ -1159,12 +1159,12 @@ components:
           format: double
     Flight:
       type: object
-      required: [departure_airport_code, arrival_airport_code, seats_available, segments, price]
+      required: [departure_flight_airport, arrival_flight_airport, seats_available, segments, price]
       properties:
-        departure_airport_code:
-          type: string
-        arrival_airport_code:
-          type: string
+        departure_flight_airport:
+          $ref: "#/components/schemas/FlightAirport"
+        arrival_flight_airport:
+          $ref: "#/components/schemas/FlightAirport"
         seats_available:
           type: integer
           format: int32
@@ -1177,15 +1177,15 @@ components:
             $ref: "#/components/schemas/FlightSegment"
     FlightSegment:
       type: object
-      required: [segment_id, departure_airport_code, arrival_airport_code]
+      required: [segment_id, departure_flight_airport, arrival_flight_airport]
       properties:
         segment_id:
           type: integer
           format: int32
-        departure_airport_code:
-          type: string
-        arrival_airport_code:
-          type: string
+        departure_flight_airport:
+          $ref: "#/components/schemas/FlightAirport"
+        arrival_flight_airport:
+          $ref: "#/components/schemas/FlightAirport"
         departure_time:
           type: string
           format: date-time
@@ -1198,6 +1198,14 @@ components:
         flight_number:
           type: string
         travel_class:
+          type: string
+    FlightAirport:
+      type: object
+      required: [code, city_name]
+      properties:
+        code:
+          type: string
+        city_name:
           type: string
     Error:
       type: object

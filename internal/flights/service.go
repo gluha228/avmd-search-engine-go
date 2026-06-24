@@ -39,11 +39,16 @@ type CurrencyConverter interface {
 	Convert(ctx context.Context, amount float64, from, to string) (float64, error)
 }
 
+type FlightAirportLookup interface {
+	FlightAirportsByIATACodes(ctx context.Context, codes []string, locale string) (map[string]FlightAirport, error)
+}
+
 type Service struct {
 	tfClient        TravelfusionClient
 	sessionStore    SessionStore
 	calendar        CalendarCache
 	currency        CurrencyConverter
+	airportLookup   FlightAirportLookup
 	defaultCurrency string
 	logger          *slog.Logger
 	now             func() time.Time
@@ -78,11 +83,24 @@ func NewServiceWithBookingDependencies(
 	defaultCurrency string,
 	logger *slog.Logger,
 ) *Service {
+	return NewServiceWithAirportLookup(tfClient, sessionStore, calendarCache, currencyConverter, nil, defaultCurrency, logger)
+}
+
+func NewServiceWithAirportLookup(
+	tfClient TravelfusionClient,
+	sessionStore SessionStore,
+	calendarCache CalendarCache,
+	currencyConverter CurrencyConverter,
+	airportLookup FlightAirportLookup,
+	defaultCurrency string,
+	logger *slog.Logger,
+) *Service {
 	return &Service{
 		tfClient:        tfClient,
 		sessionStore:    sessionStore,
 		calendar:        calendarCache,
 		currency:        currencyConverter,
+		airportLookup:   airportLookup,
 		defaultCurrency: strings.ToUpper(strings.TrimSpace(defaultCurrency)),
 		logger:          logger,
 		now:             time.Now,
@@ -286,6 +304,153 @@ func sendFlightSearchUpdate(ctx context.Context, updates chan<- SearchOffersUpda
 	case updates <- update:
 		return true
 	}
+}
+
+func (s *Service) EnrichOffers(ctx context.Context, offers []Offer, locale string) ([]EnrichedOffer, error) {
+	airportMap, err := s.loadFlightAirports(ctx, collectOfferAirportCodes(offers), locale)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]EnrichedOffer, len(offers))
+	for i := range offers {
+		result[i] = s.enrichOffer(offers[i], airportMap)
+	}
+	return result, nil
+}
+
+func (s *Service) EnrichSearchOffers(ctx context.Context, offers []Offer, locale string) ([]EnrichedOffer, error) {
+	converted := make([]Offer, len(offers))
+	for i := range offers {
+		offer, err := s.convertOfferToDefaultCurrency(ctx, offers[i])
+		if err != nil {
+			return nil, err
+		}
+		converted[i] = offer
+	}
+	return s.EnrichOffers(ctx, converted, locale)
+}
+
+func (s *Service) EnrichOffer(ctx context.Context, offer Offer, locale string) (EnrichedOffer, error) {
+	enriched, err := s.EnrichOffers(ctx, []Offer{offer}, locale)
+	if err != nil {
+		return EnrichedOffer{}, err
+	}
+	if len(enriched) == 0 {
+		return EnrichedOffer{}, nil
+	}
+	return enriched[0], nil
+}
+
+func (s *Service) loadFlightAirports(ctx context.Context, codes []string, locale string) (map[string]FlightAirport, error) {
+	result := fallbackFlightAirportMap(codes)
+	if s.airportLookup == nil || len(codes) == 0 {
+		return result, nil
+	}
+	airports, err := s.airportLookup.FlightAirportsByIATACodes(ctx, codes, locale)
+	if err != nil {
+		return nil, err
+	}
+	for code, airport := range airports {
+		normalizedCode := strings.ToUpper(strings.TrimSpace(code))
+		if normalizedCode == "" {
+			continue
+		}
+		if strings.TrimSpace(airport.Code) == "" {
+			airport.Code = normalizedCode
+		}
+		result[normalizedCode] = airport
+	}
+	return result, nil
+}
+
+func (s *Service) enrichOffer(offer Offer, airports map[string]FlightAirport) EnrichedOffer {
+	result := EnrichedOffer{
+		OfferID:        offer.OfferID,
+		OutboundFlight: s.enrichFlight(offer.OutboundFlight, airports),
+		CurrencyCode:   offer.CurrencyCode,
+		Price:          offer.Price,
+	}
+	if offer.InboundFlight != nil {
+		inbound := s.enrichFlight(*offer.InboundFlight, airports)
+		result.InboundFlight = &inbound
+	}
+	return result
+}
+
+func (s *Service) enrichFlight(flight Flight, airports map[string]FlightAirport) EnrichedFlight {
+	segments := make([]EnrichedSegment, len(flight.Segments))
+	for i := range flight.Segments {
+		segments[i] = EnrichedSegment{
+			SegmentID:              flight.Segments[i].SegmentID,
+			DepartureFlightAirport: flightAirportForCode(airports, flight.Segments[i].DepartureAirportCode),
+			ArrivalFlightAirport:   flightAirportForCode(airports, flight.Segments[i].ArrivalAirportCode),
+			DepartureTime:          flight.Segments[i].DepartureTime,
+			ArrivalTime:            flight.Segments[i].ArrivalTime,
+			DurationMinutes:        flight.Segments[i].DurationMinutes,
+			FlightNumber:           flight.Segments[i].FlightNumber,
+			TravelClass:            flight.Segments[i].TravelClass,
+		}
+	}
+	return EnrichedFlight{
+		DepartureFlightAirport: flightAirportForCode(airports, flight.DepartureAirportCode),
+		ArrivalFlightAirport:   flightAirportForCode(airports, flight.ArrivalAirportCode),
+		SeatsAvailable:         flight.SeatsAvailable,
+		Price:                  flight.Price,
+		Segments:               segments,
+	}
+}
+
+func collectOfferAirportCodes(offers []Offer) []string {
+	seen := map[string]struct{}{}
+	var codes []string
+	for _, offer := range offers {
+		collectFlightAirportCodes(offer.OutboundFlight, seen, &codes)
+		if offer.InboundFlight != nil {
+			collectFlightAirportCodes(*offer.InboundFlight, seen, &codes)
+		}
+	}
+	return codes
+}
+
+func collectFlightAirportCodes(flight Flight, seen map[string]struct{}, codes *[]string) {
+	addAirportCode(flight.DepartureAirportCode, seen, codes)
+	addAirportCode(flight.ArrivalAirportCode, seen, codes)
+	for _, segment := range flight.Segments {
+		addAirportCode(segment.DepartureAirportCode, seen, codes)
+		addAirportCode(segment.ArrivalAirportCode, seen, codes)
+	}
+}
+
+func addAirportCode(code string, seen map[string]struct{}, codes *[]string) {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if code == "" {
+		return
+	}
+	if _, ok := seen[code]; ok {
+		return
+	}
+	seen[code] = struct{}{}
+	*codes = append(*codes, code)
+}
+
+func fallbackFlightAirportMap(codes []string) map[string]FlightAirport {
+	result := make(map[string]FlightAirport, len(codes))
+	for _, code := range codes {
+		code = strings.ToUpper(strings.TrimSpace(code))
+		if code == "" {
+			continue
+		}
+		result[code] = FlightAirport{Code: code, CityName: code}
+	}
+	return result
+}
+
+func flightAirportForCode(airports map[string]FlightAirport, code string) FlightAirport {
+	code = strings.ToUpper(strings.TrimSpace(code))
+	if airport, ok := airports[code]; ok {
+		return airport
+	}
+	return FlightAirport{Code: code, CityName: code}
 }
 
 func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string) (*SelectedOffer, error) {
