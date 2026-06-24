@@ -153,6 +153,49 @@ func TestSwaggerUIRedirect(t *testing.T) {
 	}
 }
 
+func TestCORSPreflightAllowsConfiguredLocalFrontend(t *testing.T) {
+	server := NewHttpServer(&config.Config{
+		CORSAllowedOrigins: "http://localhost:5173",
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/flights/search", nil)
+	request.Header.Set("Origin", "http://localhost:5173")
+	request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	request.Header.Set("Access-Control-Request-Headers", "content-type, accept-language")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", recorder.Code)
+	}
+	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+		t.Fatalf("expected localhost origin to be allowed, got %q", got)
+	}
+	if got := recorder.Header().Get("Access-Control-Allow-Methods"); !strings.Contains(got, http.MethodPost) {
+		t.Fatalf("expected POST to be allowed, got %q", got)
+	}
+	if got := recorder.Header().Get("Access-Control-Allow-Headers"); !strings.Contains(got, "Accept-Language") {
+		t.Fatalf("expected Accept-Language to be allowed, got %q", got)
+	}
+}
+
+func TestCORSDoesNotAllowUnknownOrigin(t *testing.T) {
+	server := NewHttpServer(&config.Config{
+		CORSAllowedOrigins: "http://localhost:5173",
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	request := httptest.NewRequest(http.MethodOptions, "/api/v1/flights/search", nil)
+	request.Header.Set("Origin", "http://evil.example")
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected unknown origin not to be allowed, got %q", got)
+	}
+}
+
 func TestSearchFlightsStreamsSSE(t *testing.T) {
 	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
 	segmentArrival := departure.Add(90 * time.Minute)

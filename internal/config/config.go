@@ -8,6 +8,7 @@ type Config struct {
 	LoggingLevel                  string `env:"LOG_LEVEL" envDefault:"INFO"`
 	LoggingAddSource              bool   `env:"LOG_ADD_SOURCE" envDefault:"false"`
 	UseJsonLogs                   bool   `env:"LOG_USE_JSON" envDefault:"false"`
+	CORSAllowedOrigins            string `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"`
 	DatabaseURL                   string `env:"DB_URL" envDefault:"postgres://postgres:postgres@localhost:5432/avion?sslmode=disable"`
 	DatabaseAutoMigrate           bool   `env:"DB_AUTO_MIGRATE" envDefault:"true"`
 	RedisAddr                     string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
