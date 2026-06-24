@@ -113,6 +113,7 @@ func (s *HttpServer) CreateHandler() http.Handler {
 	strictServer := api.NewStrictHandler(s, nil)
 	r.Use(middleware.Logger)
 	r.Use(withCORS(s.cfg.CORSAllowedOrigins))
+	r.Use(withServerErrorLogging(s.logger))
 	r.Use(withRequestContext)
 	r.Get("/v3/api-docs", serveOpenAPISpec)
 	r.Get("/swagger-ui", redirectToSwaggerUI)

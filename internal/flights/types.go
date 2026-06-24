@@ -36,6 +36,13 @@ type SearchResponse struct {
 	Offers    []Offer
 }
 
+type SearchOffersUpdate struct {
+	SearchID  string
+	RoutingID string
+	Offers    []Offer
+	Err       error
+}
+
 type SelectedOffer struct {
 	Offer            Offer
 	SearchParams     SearchRequest

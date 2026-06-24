@@ -1,7 +1,13 @@
 package travelfusion
 
 import (
+	"bytes"
+	"context"
 	"encoding/xml"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -317,5 +323,156 @@ func TestExtractFlights(t *testing.T) {
 	}
 	if len(outward[0].Segments) != 1 || outward[0].Segments[0].FlightNumber != "TF100" {
 		t.Fatalf("unexpected segments: %+v", outward[0].Segments)
+	}
+}
+
+func TestRoutingNeedsPollingUsesRouterCompleteFlags(t *testing.T) {
+	if !routingNeedsPolling([]router{{Complete: "false"}, {Complete: "true"}}) {
+		t.Fatal("expected polling while any router is incomplete")
+	}
+	if routingNeedsPolling([]router{{Complete: "true"}, {SearchComplete: "true"}}) {
+		t.Fatal("expected no polling when all routers are complete")
+	}
+	if routingNeedsPolling([]router{{Status: "completed"}}) {
+		t.Fatal("expected completed status to stop polling")
+	}
+}
+
+func TestRoutingCompleteTreatsEmptyRouterListAsComplete(t *testing.T) {
+	if !routingComplete(checkRoutingResponse{}) {
+		t.Fatal("expected empty router list to be complete because no incomplete routers remain")
+	}
+}
+
+func TestSearchStreamLogsPollingAttempts(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request body: %v", err)
+		}
+		requests++
+		w.Header().Set("Content-Type", "text/xml")
+		if strings.Contains(string(body), "<StartRouting>") {
+			_, _ = w.Write([]byte(`<CommandList>
+  <StartRouting>
+    <RoutingId>RID</RoutingId>
+    <RouterList>
+      <Router><Complete>false</Complete></Router>
+      <Router><Complete>false</Complete></Router>
+    </RouterList>
+  </StartRouting>
+</CommandList>`))
+			return
+		}
+		_, _ = w.Write([]byte(`<CommandList>
+  <CheckRouting>
+    <RoutingId>RID</RoutingId>
+    <RouterList>
+      <Router><Complete>true</Complete></Router>
+      <Router><Complete>false</Complete></Router>
+    </RouterList>
+  </CheckRouting>
+</CommandList>`))
+	}))
+	defer server.Close()
+
+	var logBuffer bytes.Buffer
+	client := NewClient(Config{
+		BaseURL:             server.URL,
+		XmlLoginID:          "xml",
+		LoginID:             "login",
+		TimeoutSeconds:      5,
+		PollingAttempts:     3,
+		PollingDelaySeconds: 0,
+	}, slog.New(slog.NewTextHandler(&logBuffer, &slog.HandlerOptions{Level: slog.LevelDebug})))
+
+	for update := range client.SearchStream(context.Background(), SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		AdultCount:           1,
+	}) {
+		if update.Err != nil {
+			t.Fatalf("unexpected search update error: %v", update.Err)
+		}
+	}
+
+	if requests != 4 {
+		t.Fatalf("expected StartRouting and three CheckRouting requests, got %d", requests)
+	}
+	logOutput := logBuffer.String()
+	if !strings.Contains(logOutput, "Poll attempt") ||
+		!strings.Contains(logOutput, "attempt=1") ||
+		!strings.Contains(logOutput, "max_attempts=3") ||
+		!strings.Contains(logOutput, "routing_id=RID") {
+		t.Fatalf("expected poll attempt debug log, got %q", logOutput)
+	}
+	if !strings.Contains(logOutput, "travelfusion search routers started") ||
+		!strings.Contains(logOutput, "routers_started=2") {
+		t.Fatalf("expected started routers debug log, got %q", logOutput)
+	}
+	if !strings.Contains(logOutput, "TravelFusion search routers completed") ||
+		!strings.Contains(logOutput, "completed_routers=1") ||
+		!strings.Contains(logOutput, "total_routers=2") {
+		t.Fatalf("expected completed routers debug log, got %q", logOutput)
+	}
+}
+
+func TestSearchStreamDoesNotSleepBeforeFirstCheckRouting(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read request body: %v", err)
+		}
+		requests++
+		w.Header().Set("Content-Type", "text/xml")
+		if strings.Contains(string(body), "<StartRouting>") {
+			_, _ = w.Write([]byte(`<CommandList>
+  <StartRouting>
+    <RoutingId>RID</RoutingId>
+    <RouterList>
+      <Router><Complete>false</Complete></Router>
+    </RouterList>
+  </StartRouting>
+</CommandList>`))
+			return
+		}
+		_, _ = w.Write([]byte(`<CommandList>
+  <CheckRouting>
+    <RoutingId>RID</RoutingId>
+    <RouterList>
+      <Router><Complete>true</Complete></Router>
+    </RouterList>
+  </CheckRouting>
+</CommandList>`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{
+		BaseURL:             server.URL,
+		XmlLoginID:          "xml",
+		LoginID:             "login",
+		TimeoutSeconds:      5,
+		PollingAttempts:     3,
+		PollingDelaySeconds: 60,
+	}, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	for update := range client.SearchStream(ctx, SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		AdultCount:           1,
+	}) {
+		if update.Err != nil {
+			t.Fatalf("unexpected search update error: %v", update.Err)
+		}
+	}
+
+	if requests != 2 {
+		t.Fatalf("expected StartRouting and immediate first CheckRouting request, got %d requests", requests)
 	}
 }

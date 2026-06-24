@@ -24,6 +24,13 @@ type SearchResult struct {
 	ReturnFlights  []Flight
 }
 
+type SearchUpdate struct {
+	RoutingID      string
+	OutwardFlights []Flight
+	ReturnFlights  []Flight
+	Err            error
+}
+
 type Currency struct {
 	Name    string
 	Code    string

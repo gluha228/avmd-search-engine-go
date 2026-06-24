@@ -188,18 +188,32 @@ func routingComplete(resp checkRoutingResponse) bool {
 	if parseBoolish(resp.Summary.Complete) {
 		return true
 	}
-	if len(resp.RouterList) == 0 {
-		return false
-	}
-	for _, router := range resp.RouterList {
-		if parseBoolish(router.Complete) || parseBoolish(router.SearchComplete) {
-			continue
+	return !routingNeedsPolling(resp.RouterList)
+}
+
+func routingNeedsPolling(routers []router) bool {
+	for _, router := range routers {
+		if !routerComplete(router) {
+			return true
 		}
-		status := strings.ToLower(strings.TrimSpace(router.Status))
-		if status == "complete" || status == "completed" || status == "done" {
-			continue
-		}
-		return false
 	}
-	return true
+	return false
+}
+
+func completedRouterCount(routers []router) int {
+	count := 0
+	for _, router := range routers {
+		if routerComplete(router) {
+			count++
+		}
+	}
+	return count
+}
+
+func routerComplete(router router) bool {
+	if parseBoolish(router.Complete) || parseBoolish(router.SearchComplete) {
+		return true
+	}
+	status := strings.ToLower(strings.TrimSpace(router.Status))
+	return status == "complete" || status == "completed" || status == "done"
 }

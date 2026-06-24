@@ -20,6 +20,7 @@ var (
 
 type TravelfusionClient interface {
 	Search(ctx context.Context, req travelfusion.SearchRequest) (*travelfusion.SearchResult, error)
+	SearchStream(ctx context.Context, req travelfusion.SearchRequest) <-chan travelfusion.SearchUpdate
 	ProcessDetails(ctx context.Context, req travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error)
 	ProcessTerms(ctx context.Context, req travelfusion.ProcessTermsRequest) (*travelfusion.ProcessTermsResult, error)
 }
@@ -113,11 +114,53 @@ func (s *Service) SearchIntoSession(
 	req SearchRequest,
 	onOffers func([]Offer) error,
 ) (*SearchResponse, error) {
+	var response SearchResponse
+	seenUpdate := false
+	for update := range s.SearchIntoSessionStream(ctx, searchID, req) {
+		if update.Err != nil {
+			return nil, update.Err
+		}
+		seenUpdate = true
+		response.SearchID = update.SearchID
+		response.RoutingID = update.RoutingID
+		response.Offers = update.Offers
+		if len(update.Offers) > 0 && onOffers != nil {
+			if err := onOffers(update.Offers); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if !seenUpdate {
+		response.SearchID = searchID
+	}
+	return &response, nil
+}
+
+func (s *Service) SearchIntoSessionStream(
+	ctx context.Context,
+	searchID string,
+	req SearchRequest,
+) <-chan SearchOffersUpdate {
+	updates := make(chan SearchOffersUpdate)
+	go func() {
+		defer close(updates)
+		s.searchIntoSessionStream(ctx, searchID, req, updates)
+	}()
+	return updates
+}
+
+func (s *Service) searchIntoSessionStream(
+	ctx context.Context,
+	searchID string,
+	req SearchRequest,
+	updates chan<- SearchOffersUpdate,
+) {
 	if err := s.Validate(req); err != nil {
-		return nil, err
+		sendFlightSearchUpdate(ctx, updates, SearchOffersUpdate{SearchID: searchID, Err: err})
+		return
 	}
 
-	tfResult, err := s.tfClient.Search(ctx, travelfusion.SearchRequest{
+	tfReq := travelfusion.SearchRequest{
 		DepartureAirportCode: req.DepartureAirportCode,
 		ArrivalAirportCode:   req.ArrivalAirportCode,
 		DepartureDate:        req.DepartureDate,
@@ -125,57 +168,124 @@ func (s *Service) SearchIntoSession(
 		AdultCount:           req.AdultCount,
 		ChildCount:           req.ChildCount,
 		InfantCount:          req.InfantCount,
-	})
-	if err != nil {
-		return nil, err
 	}
-	if s.calendar != nil {
-		if err := s.calendar.CacheFlights(ctx, req.DepartureAirportCode, req.ArrivalAirportCode, tfResult.OutwardFlights); err != nil && s.logger != nil {
-			s.logger.Warn("failed to cache outbound calendar prices", "error", err)
+
+	var routingID string
+	var outwardFlights []travelfusion.Flight
+	var returnFlights []travelfusion.Flight
+	var offers []Offer
+	for tfUpdate := range s.tfClient.SearchStream(ctx, tfReq) {
+		if tfUpdate.Err != nil {
+			sendFlightSearchUpdate(ctx, updates, SearchOffersUpdate{SearchID: searchID, RoutingID: routingID, Offers: offers, Err: tfUpdate.Err})
+			return
 		}
-		if req.ReturnDate != nil {
-			if err := s.calendar.CacheFlights(ctx, req.ArrivalAirportCode, req.DepartureAirportCode, tfResult.ReturnFlights); err != nil && s.logger != nil {
-				s.logger.Warn("failed to cache inbound calendar prices", "error", err)
+		if strings.TrimSpace(tfUpdate.RoutingID) != "" {
+			routingID = tfUpdate.RoutingID
+		}
+		if s.calendar != nil {
+			if len(tfUpdate.OutwardFlights) > 0 {
+				if err := s.calendar.CacheFlights(ctx, req.DepartureAirportCode, req.ArrivalAirportCode, tfUpdate.OutwardFlights); err != nil && s.logger != nil {
+					s.logger.Warn("failed to cache outbound calendar prices", "error", err)
+				}
+			}
+			if req.ReturnDate != nil && len(tfUpdate.ReturnFlights) > 0 {
+				if err := s.calendar.CacheFlights(ctx, req.ArrivalAirportCode, req.DepartureAirportCode, tfUpdate.ReturnFlights); err != nil && s.logger != nil {
+					s.logger.Warn("failed to cache inbound calendar prices", "error", err)
+				}
 			}
 		}
-	}
+		outwardFlights = mergeTravelfusionFlights(outwardFlights, tfUpdate.OutwardFlights)
+		returnFlights = mergeTravelfusionFlights(returnFlights, tfUpdate.ReturnFlights)
 
-	outwardFlights := filterToDate(tfResult.OutwardFlights, req.DepartureDate)
-	returnFlights := []travelfusion.Flight(nil)
+		offers = s.mapSearchOffers(req, outwardFlights, returnFlights)
+		if s.logger != nil {
+			s.logger.Debug("flight search mapped", "routing_id", routingID, "offers", len(offers))
+		}
+
+		if err := s.saveSearchSession(ctx, searchID, req, routingID, offers); err != nil {
+			sendFlightSearchUpdate(ctx, updates, SearchOffersUpdate{SearchID: searchID, RoutingID: routingID, Offers: offers, Err: err})
+			return
+		}
+
+		if !sendFlightSearchUpdate(ctx, updates, SearchOffersUpdate{
+			SearchID:  searchID,
+			RoutingID: routingID,
+			Offers:    offers,
+		}) {
+			return
+		}
+	}
+}
+
+func (s *Service) mapSearchOffers(req SearchRequest, outwardFlights, returnFlights []travelfusion.Flight) []Offer {
+	filteredOutward := filterToDate(outwardFlights, req.DepartureDate)
+	filteredReturns := []travelfusion.Flight(nil)
 	if req.ReturnDate != nil {
-		returnFlights = filterToDate(tfResult.ReturnFlights, *req.ReturnDate)
+		filteredReturns = filterToDate(returnFlights, *req.ReturnDate)
 	}
-
-	offers := applyFilters(buildOffers(outwardFlights, returnFlights, req.ReturnDate != nil), req)
+	offers := applyFilters(buildOffers(filteredOutward, filteredReturns, req.ReturnDate != nil), req)
 	sort.Slice(offers, func(i, j int) bool {
 		return offers[i].Price < offers[j].Price
 	})
-	if len(offers) > 0 && onOffers != nil {
-		if err := onOffers(offers); err != nil {
-			return nil, err
+	return offers
+}
+
+func mergeTravelfusionFlights(current, next []travelfusion.Flight) []travelfusion.Flight {
+	if len(next) == 0 {
+		return current
+	}
+	byKey := make(map[string]int, len(current)+len(next))
+	for i := range current {
+		byKey[travelfusionFlightKey(current[i])] = i
+	}
+	for _, flight := range next {
+		key := travelfusionFlightKey(flight)
+		if existingIndex, ok := byKey[key]; ok {
+			current[existingIndex] = flight
+			continue
 		}
+		byKey[key] = len(current)
+		current = append(current, flight)
 	}
+	return current
+}
 
-	if s.logger != nil {
-		s.logger.Debug("flight search mapped", "routing_id", tfResult.RoutingID, "offers", len(offers))
+func travelfusionFlightKey(flight travelfusion.Flight) string {
+	if strings.TrimSpace(flight.ID) != "" {
+		return strings.TrimSpace(flight.ID)
 	}
+	return strings.Join([]string{
+		flight.Origin,
+		flight.Destination,
+		flight.DepartureTime.Format(time.RFC3339Nano),
+		flight.ArrivalTime.Format(time.RFC3339Nano),
+		fmt.Sprintf("%.2f", flight.Price),
+		flight.Currency,
+	}, "|")
+}
 
-	if s.sessionStore != nil && searchID != "" {
-		err = s.sessionStore.Save(ctx, searchID, FlightSearchSession{
-			Params:      req,
-			TFRoutingID: tfResult.RoutingID,
-			TFOffers:    offers,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("update flight search session: %w", err)
-		}
+func (s *Service) saveSearchSession(ctx context.Context, searchID string, req SearchRequest, routingID string, offers []Offer) error {
+	if s.sessionStore == nil || searchID == "" {
+		return nil
 	}
+	err := s.sessionStore.Save(ctx, searchID, FlightSearchSession{
+		Params:      req,
+		TFRoutingID: routingID,
+		TFOffers:    offers,
+	})
+	if err != nil {
+		return fmt.Errorf("update flight search session: %w", err)
+	}
+	return nil
+}
 
-	return &SearchResponse{
-		SearchID:  searchID,
-		RoutingID: tfResult.RoutingID,
-		Offers:    offers,
-	}, nil
+func sendFlightSearchUpdate(ctx context.Context, updates chan<- SearchOffersUpdate, update SearchOffersUpdate) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case updates <- update:
+		return true
+	}
 }
 
 func (s *Service) GetSelectedOffer(ctx context.Context, searchID, offerID string) (*SelectedOffer, error) {

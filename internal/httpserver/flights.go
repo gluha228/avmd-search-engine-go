@@ -148,12 +148,17 @@ func (response searchFlightsSSEResponse) VisitSearchFlightsResponse(w http.Respo
 		return err
 	}
 
-	_, err = response.service.SearchIntoSession(response.ctx, searchID, response.request, func(offers []flights.Offer) error {
-		return writeSSE(w, flusher, "offers", map[string][]sseOffer{"offers": mapOffers(offers)})
-	})
-	if err != nil {
-		_ = writeSSE(w, flusher, "error", map[string]string{"message": err.Error()})
-		return nil
+	for update := range response.service.SearchIntoSessionStream(response.ctx, searchID, response.request) {
+		if update.Err != nil {
+			_ = writeSSE(w, flusher, "error", map[string]string{"message": update.Err.Error()})
+			return nil
+		}
+		if len(update.Offers) == 0 {
+			continue
+		}
+		if err := writeSSE(w, flusher, "offers", mapOffers(update.Offers)); err != nil {
+			return err
+		}
 	}
 
 	return writeSSEString(w, flusher, "done", "")

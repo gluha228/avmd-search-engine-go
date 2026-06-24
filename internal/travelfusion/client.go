@@ -49,61 +49,140 @@ func NewClient(cfg Config, logger *slog.Logger) *Client {
 }
 
 func (c *Client) Search(ctx context.Context, req SearchRequest) (*SearchResult, error) {
+	result := &SearchResult{}
+	for update := range c.SearchStream(ctx, req) {
+		if update.Err != nil {
+			return nil, update.Err
+		}
+		if strings.TrimSpace(update.RoutingID) != "" {
+			result.RoutingID = update.RoutingID
+		}
+		result.OutwardFlights = append(result.OutwardFlights, update.OutwardFlights...)
+		result.ReturnFlights = append(result.ReturnFlights, update.ReturnFlights...)
+	}
+	return result, nil
+}
+
+func (c *Client) SearchStream(ctx context.Context, req SearchRequest) <-chan SearchUpdate {
+	updates := make(chan SearchUpdate, c.pollingAttempts)
+	go func() {
+		defer close(updates)
+		c.searchStream(ctx, req, updates)
+	}()
+	return updates
+}
+
+func (c *Client) searchStream(ctx context.Context, req SearchRequest, updates chan<- SearchUpdate) {
 	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
-		return nil, ErrMissingCredentials
+		sendSearchError(ctx, updates, ErrMissingCredentials)
+		return
 	}
 
 	startPayload, err := buildStartRoutingXML(c.xmlLoginID, c.loginID, c.timeoutSeconds, req)
 	if err != nil {
-		return nil, fmt.Errorf("build start routing request: %w", err)
+		sendSearchError(ctx, updates, fmt.Errorf("build start routing request: %w", err))
+		return
 	}
 	startBody, err := c.postXML(ctx, "StartRouting", startPayload)
 	if err != nil {
-		return nil, fmt.Errorf("start routing: %w", err)
+		sendSearchError(ctx, updates, fmt.Errorf("start routing: %w", err))
+		return
 	}
 
 	var startResp commandListStartRoutingResponse
 	if err := xml.Unmarshal(startBody, &startResp); err != nil {
-		return nil, fmt.Errorf("parse start routing response: %w", err)
+		sendSearchError(ctx, updates, fmt.Errorf("parse start routing response: %w", err))
+		return
 	}
 	if strings.TrimSpace(startResp.StartRouting.RoutingID) == "" {
-		return nil, fmt.Errorf("travelfusion start routing returned empty routing id")
+		sendSearchError(ctx, updates, fmt.Errorf("travelfusion start routing returned empty routing id"))
+		return
 	}
-	if len(startResp.StartRouting.RouterList) == 0 {
-		return &SearchResult{RoutingID: startResp.StartRouting.RoutingID}, nil
+	routingID := startResp.StartRouting.RoutingID
+	if c.logger != nil {
+		c.logger.Debug(
+			"travelfusion search routers started",
+			"routing_id", routingID,
+			"routers_started", len(startResp.StartRouting.RouterList),
+		)
+	}
+	if !sendSearchUpdate(ctx, updates, SearchUpdate{RoutingID: routingID}) {
+		return
+	}
+	if !routingNeedsPolling(startResp.StartRouting.RouterList) {
+		return
 	}
 
-	result := &SearchResult{RoutingID: startResp.StartRouting.RoutingID}
 	for attempt := 0; attempt < c.pollingAttempts; attempt++ {
-		if attempt > 0 || c.pollingDelaySeconds > 0 {
+		if attempt > 0 && c.pollingDelaySeconds > 0 {
 			if err := sleepContext(ctx, time.Duration(c.pollingDelaySeconds)*time.Second); err != nil {
-				return nil, err
+				sendSearchError(ctx, updates, err)
+				return
 			}
 		}
+		if c.logger != nil {
+			c.logger.Debug(
+				"Poll attempt",
+				"attempt", attempt+1,
+				"max_attempts", c.pollingAttempts,
+				"routing_id", routingID,
+			)
+		}
 
-		checkPayload, err := buildCheckRoutingXML(c.xmlLoginID, c.loginID, startResp.StartRouting.RoutingID)
+		checkPayload, err := buildCheckRoutingXML(c.xmlLoginID, c.loginID, routingID)
 		if err != nil {
-			return nil, fmt.Errorf("build check routing request: %w", err)
+			sendSearchError(ctx, updates, fmt.Errorf("build check routing request: %w", err))
+			return
 		}
 		checkBody, err := c.postXML(ctx, "CheckRouting", checkPayload)
 		if err != nil {
-			return nil, fmt.Errorf("check routing: %w", err)
+			sendSearchError(ctx, updates, fmt.Errorf("check routing: %w", err))
+			return
 		}
 
 		var checkResp commandListCheckRoutingResponse
 		if err := xml.Unmarshal(checkBody, &checkResp); err != nil {
-			return nil, fmt.Errorf("parse check routing response: %w", err)
+			sendSearchError(ctx, updates, fmt.Errorf("parse check routing response: %w", err))
+			return
+		}
+		if c.logger != nil {
+			c.logger.Debug(
+				"TravelFusion search routers completed",
+				"attempt", attempt+1,
+				"max_attempts", c.pollingAttempts,
+				"routing_id", routingID,
+				"completed_routers", completedRouterCount(checkResp.CheckRouting.RouterList),
+				"total_routers", len(checkResp.CheckRouting.RouterList),
+			)
 		}
 		outward, returns := extractFlights(checkResp.CheckRouting)
-		result.OutwardFlights = append(result.OutwardFlights, outward...)
-		result.ReturnFlights = append(result.ReturnFlights, returns...)
+		if len(outward) > 0 || len(returns) > 0 {
+			if !sendSearchUpdate(ctx, updates, SearchUpdate{
+				RoutingID:      routingID,
+				OutwardFlights: outward,
+				ReturnFlights:  returns,
+			}) {
+				return
+			}
+		}
 
 		if routingComplete(checkResp.CheckRouting) {
 			break
 		}
 	}
+}
 
-	return result, nil
+func sendSearchError(ctx context.Context, updates chan<- SearchUpdate, err error) {
+	sendSearchUpdate(ctx, updates, SearchUpdate{Err: err})
+}
+
+func sendSearchUpdate(ctx context.Context, updates chan<- SearchUpdate, update SearchUpdate) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case updates <- update:
+		return true
+	}
 }
 
 func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error) {

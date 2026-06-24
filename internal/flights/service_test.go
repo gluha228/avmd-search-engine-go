@@ -1,6 +1,7 @@
 package flights
 
 import (
+	"avmd-search-engine-go/internal/testsupport"
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
 	"errors"
@@ -10,6 +11,7 @@ import (
 
 type fakeTFClient struct {
 	result           *travelfusion.SearchResult
+	searchUpdates    []travelfusion.SearchUpdate
 	processDetails   *travelfusion.ProcessDetailsResult
 	processTerms     *travelfusion.ProcessTermsResult
 	processTermsReqs *[]travelfusion.ProcessTermsRequest
@@ -50,6 +52,10 @@ type calendarCacheCall struct {
 
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
+}
+
+func (f fakeTFClient) SearchStream(ctx context.Context, _ travelfusion.SearchRequest) <-chan travelfusion.SearchUpdate {
+	return testsupport.SearchUpdateStream(ctx, f.result, f.searchUpdates, f.err)
 }
 
 func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
@@ -158,6 +164,39 @@ func TestSearchCreatesFlightSearchSession(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("unexpected stored session: %+v", store.session)
+	}
+}
+
+func TestSearchIntoSessionStreamEmitsOffersAsTravelfusionUpdatesArrive(t *testing.T) {
+	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1"}
+	service := NewServiceWithSessionStore(fakeTFClient{searchUpdates: []travelfusion.SearchUpdate{
+		{RoutingID: "RID"},
+		{RoutingID: "RID", OutwardFlights: []travelfusion.Flight{tfFlight("OUT1", "KIV", "OTP", departure, 100)}},
+		{RoutingID: "RID", OutwardFlights: []travelfusion.Flight{tfFlight("OUT2", "KIV", "OTP", departure, 200)}},
+	}}, store, nil)
+	service.now = func() time.Time { return time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC) }
+
+	var offerCounts []int
+	for update := range service.SearchIntoSessionStream(context.Background(), "search-1", SearchRequest{
+		DepartureAirportCode: "KIV",
+		ArrivalAirportCode:   "OTP",
+		DepartureDate:        departure,
+		AdultCount:           1,
+	}) {
+		if update.Err != nil {
+			t.Fatalf("unexpected stream error: %v", update.Err)
+		}
+		if len(update.Offers) > 0 {
+			offerCounts = append(offerCounts, len(update.Offers))
+		}
+	}
+
+	if len(offerCounts) != 2 || offerCounts[0] != 1 || offerCounts[1] != 2 {
+		t.Fatalf("expected incremental offer counts [1 2], got %+v", offerCounts)
+	}
+	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 2 {
+		t.Fatalf("expected final session to contain two offers, got %+v", store.session)
 	}
 }
 

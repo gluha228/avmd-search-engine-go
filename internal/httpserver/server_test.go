@@ -4,9 +4,12 @@ import (
 	"avmd-search-engine-go/internal/calendar"
 	"avmd-search-engine-go/internal/config"
 	"avmd-search-engine-go/internal/flights"
+	"avmd-search-engine-go/internal/testsupport"
 	"avmd-search-engine-go/internal/travelfusion"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -18,6 +21,7 @@ import (
 
 type fakeTFClient struct {
 	result         *travelfusion.SearchResult
+	searchUpdates  []travelfusion.SearchUpdate
 	processDetails *travelfusion.ProcessDetailsResult
 	processTerms   *travelfusion.ProcessTermsResult
 	err            error
@@ -25,6 +29,10 @@ type fakeTFClient struct {
 
 func (f fakeTFClient) Search(context.Context, travelfusion.SearchRequest) (*travelfusion.SearchResult, error) {
 	return f.result, f.err
+}
+
+func (f fakeTFClient) SearchStream(ctx context.Context, _ travelfusion.SearchRequest) <-chan travelfusion.SearchUpdate {
+	return testsupport.SearchUpdateStream(ctx, f.result, f.searchUpdates, f.err)
 }
 
 func (f fakeTFClient) ProcessDetails(context.Context, travelfusion.ProcessDetailsRequest) (*travelfusion.ProcessDetailsResult, error) {
@@ -43,6 +51,7 @@ type fakeSessionStore struct {
 
 type fakeCalendarPriceStore struct {
 	entries map[string]calendar.PriceEntry
+	err     error
 }
 
 func (f *fakeSessionStore) Create(_ context.Context, session flights.FlightSearchSession) (string, error) {
@@ -63,6 +72,9 @@ func (f *fakeSessionStore) Get(_ context.Context, _ string) (*flights.FlightSear
 }
 
 func (f *fakeCalendarPriceStore) GetMinPrice(_ context.Context, origin, destination string, date time.Time) (*calendar.PriceEntry, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
 	entry, ok := f.entries[origin+":"+destination+":"+date.Format(time.DateOnly)]
 	if !ok {
 		return nil, nil
@@ -250,6 +262,66 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 	}
 	if store.session.TFRoutingID != "RID" || len(store.session.TFOffers) != 1 {
 		t.Fatalf("expected final session to be saved, got %+v", store.session)
+	}
+}
+
+func TestSearchFlightsStreamsOffersAsTheyArrive(t *testing.T) {
+	departure := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+	store := &fakeSessionStore{searchID: "search-1"}
+	server := NewHttpServer(&config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	server.flightService = flights.NewServiceWithSessionStore(fakeTFClient{searchUpdates: []travelfusion.SearchUpdate{
+		{RoutingID: "RID"},
+		{RoutingID: "RID", OutwardFlights: []travelfusion.Flight{
+			{
+				ID:            "OUT1",
+				Origin:        "KIV",
+				Destination:   "OTP",
+				DepartureTime: departure,
+				ArrivalTime:   departure.Add(90 * time.Minute),
+				Price:         100,
+				Currency:      "EUR",
+				Segments: []travelfusion.Segment{
+					{Origin: "KIV", Destination: "OTP", DepartureTime: departure, ArrivalTime: departure.Add(90 * time.Minute), DurationMinutes: 90},
+				},
+			},
+		}},
+		{RoutingID: "RID", OutwardFlights: []travelfusion.Flight{
+			{
+				ID:            "OUT2",
+				Origin:        "KIV",
+				Destination:   "OTP",
+				DepartureTime: departure,
+				ArrivalTime:   departure.Add(120 * time.Minute),
+				Price:         200,
+				Currency:      "EUR",
+				Segments: []travelfusion.Segment{
+					{Origin: "KIV", Destination: "OTP", DepartureTime: departure, ArrivalTime: departure.Add(120 * time.Minute), DurationMinutes: 120},
+				},
+			},
+		}},
+	}}, store, nil)
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/flights/search?departureAirportCode=KIV&arrivalAirportCode=OTP&departureDate=2026-07-02&adultCount=1",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	body := recorder.Body.String()
+	if count := strings.Count(body, "event: offers"); count != 2 {
+		t.Fatalf("expected two offers events, got %d: %s", count, body)
+	}
+	if !strings.Contains(body, `"offer_id":"TF-OUT1"`) || !strings.Contains(body, `"offer_id":"TF-OUT2"`) {
+		t.Fatalf("expected both streamed offers, got %s", body)
+	}
+	if len(store.session.TFOffers) != 2 {
+		t.Fatalf("expected final session to contain two offers, got %+v", store.session)
 	}
 }
 
@@ -507,5 +579,55 @@ func TestGetCalendarReturnsCachedPrices(t *testing.T) {
 	body := recorder.Body.String()
 	if !strings.Contains(body, `"date":"2026-07-02"`) || !strings.Contains(body, `"price":123.45`) {
 		t.Fatalf("unexpected calendar response: %s", body)
+	}
+}
+
+func TestServerLogsUnexpectedFiveHundreds(t *testing.T) {
+	var logBuffer bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuffer, nil))
+	server := NewHttpServer(&config.Config{}, logger)
+	calendarService := calendar.NewService(&fakeCalendarPriceStore{err: errors.New("redis unavailable")}, "EUR", nil, nil)
+	server.calendarService = calendarService
+
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/api/v1/flights/calendar?departureAirportCode=BKK&arrivalAirportCode=HKG&dateFrom=2026-07-01&dateTo=2026-07-31",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	server.CreateHandler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	logOutput := logBuffer.String()
+	if !strings.Contains(logOutput, "request completed with unexpected server error") ||
+		!strings.Contains(logOutput, "/api/v1/flights/calendar") ||
+		!strings.Contains(logOutput, "redis unavailable") {
+		t.Fatalf("expected 500 details to be logged, got %q", logOutput)
+	}
+}
+
+func TestServerLogsUnexpectedPanics(t *testing.T) {
+	var logBuffer bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuffer, nil))
+	handler := withServerErrorLogging(logger)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	}))
+
+	request := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", recorder.Code)
+	}
+	logOutput := logBuffer.String()
+	if !strings.Contains(logOutput, "unexpected panic while handling request") ||
+		!strings.Contains(logOutput, "boom") ||
+		!strings.Contains(logOutput, "request completed with unexpected server error") {
+		t.Fatalf("expected panic details to be logged, got %q", logOutput)
 	}
 }
