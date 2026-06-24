@@ -235,6 +235,9 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 				ArrivalTime:   segmentArrival,
 				Price:         100,
 				Currency:      "EUR",
+				PassengerPrices: travelfusion.PassengerPrices{
+					Adults: []float64{100},
+				},
 				Segments: []travelfusion.Segment{
 					{
 						Origin:          "KIV",
@@ -266,7 +269,7 @@ func TestSearchFlightsStreamsSSE(t *testing.T) {
 		t.Fatalf("expected SSE content type, got %q", contentType)
 	}
 	body := recorder.Body.String()
-	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, `"departure_time":"2026-07-02T22:30:00"`, "event: done\ndata: \n\n"} {
+	for _, expected := range []string{"event: search_id", `"search_id":"search-1"`, "event: offers", `"offer_id":"TF-OUT1"`, `"passenger_prices":{"adults":[100],"children":[],"infants":[]}`, `"departure_time":"2026-07-02T22:30:00"`, "event: done\ndata: \n\n"} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected SSE body to contain %q, got %q", expected, body)
 		}
@@ -414,6 +417,9 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 				OfferID:      "TF-OUT1",
 				CurrencyCode: "EUR",
 				Price:        100,
+				PassengerPrices: flights.PassengerPrices{
+					Adults: []float64{100},
+				},
 				OutboundFlight: flights.Flight{
 					DepartureAirportCode: "KIV",
 					ArrivalAirportCode:   "OTP",
@@ -467,6 +473,10 @@ func TestGetSelectedOfferReturnsCachedSessionOffer(t *testing.T) {
 	searchParams := response["search_params"].(map[string]any)
 	if offer["offer_id"] != "TF-OUT1" || offer["price"] != float64(100) {
 		t.Fatalf("unexpected offer response: %s", recorder.Body.String())
+	}
+	passengerPrices := offer["passenger_prices"].(map[string]any)
+	if adults := passengerPrices["adults"].([]any); len(adults) != 1 || adults[0] != float64(100) {
+		t.Fatalf("unexpected passenger_prices response: %s", recorder.Body.String())
 	}
 	outboundFlight := offer["outbound_flight"].(map[string]any)
 	if _, ok := outboundFlight["price"]; ok {

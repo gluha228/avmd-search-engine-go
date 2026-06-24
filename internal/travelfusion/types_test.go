@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -349,6 +350,56 @@ func TestExtractFlights(t *testing.T) {
 	}
 	if outward[0].Segments[0].TravelClass != "Economy With Restrictions" || outward[0].MinimalTravelClass != "Economy With Restrictions" {
 		t.Fatalf("unexpected travel class: %+v", outward[0])
+	}
+}
+
+func TestExtractFlightsReadsPassengerPrices(t *testing.T) {
+	body := []byte(`<CommandList>
+  <CheckRouting>
+    <RouterList>
+      <Router>
+        <GroupList>
+          <Group>
+            <OutwardList>
+              <Outward>
+                <Id>OUT1</Id>
+                <Origin><Code>KIV</Code></Origin>
+                <Destination><Code>OTP</Code></Destination>
+                <Price>
+                  <Amount>250</Amount>
+                  <Currency>EUR</Currency>
+                  <PassengerPriceList>
+                    <PassengerPrice><Amount>100</Amount><Age>30</Age></PassengerPrice>
+                    <PassengerPrice><Amount>90</Amount><Age>30</Age></PassengerPrice>
+                    <PassengerPrice><Amount>50</Amount><Age>7</Age></PassengerPrice>
+                    <PassengerPrice><Amount>10</Amount><Age>0</Age></PassengerPrice>
+                  </PassengerPriceList>
+                </Price>
+              </Outward>
+            </OutwardList>
+          </Group>
+        </GroupList>
+      </Router>
+    </RouterList>
+  </CheckRouting>
+</CommandList>`)
+
+	var resp commandListCheckRoutingResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("xml.Unmarshal returned error: %v", err)
+	}
+	outward, _ := extractFlights(resp.CheckRouting)
+	if len(outward) != 1 {
+		t.Fatalf("expected 1 outward flight, got %d", len(outward))
+	}
+	if !slices.Equal(outward[0].PassengerPrices.Adults, []float64{100, 90}) {
+		t.Fatalf("unexpected adult prices: %+v", outward[0].PassengerPrices)
+	}
+	if !slices.Equal(outward[0].PassengerPrices.Children, []float64{50}) {
+		t.Fatalf("unexpected child prices: %+v", outward[0].PassengerPrices)
+	}
+	if !slices.Equal(outward[0].PassengerPrices.Infants, []float64{10}) {
+		t.Fatalf("unexpected infant prices: %+v", outward[0].PassengerPrices)
 	}
 }
 

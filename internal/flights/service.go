@@ -365,11 +365,12 @@ func (s *Service) loadFlightAirports(ctx context.Context, codes []string, locale
 
 func (s *Service) enrichOffer(offer Offer, airports map[string]FlightAirport) EnrichedOffer {
 	result := EnrichedOffer{
-		OfferID:        offer.OfferID,
-		OutboundFlight: s.enrichFlight(offer.OutboundFlight, airports),
-		CurrencyCode:   offer.CurrencyCode,
-		FareBand:       normalizeFareBand(offer.FareBand),
-		Price:          offer.Price,
+		OfferID:         offer.OfferID,
+		OutboundFlight:  s.enrichFlight(offer.OutboundFlight, airports),
+		CurrencyCode:    offer.CurrencyCode,
+		FareBand:        normalizeFareBand(offer.FareBand),
+		Price:           offer.Price,
+		PassengerPrices: normalizePassengerPrices(offer.PassengerPrices),
 	}
 	if offer.InboundFlight != nil {
 		inbound := s.enrichFlight(*offer.InboundFlight, airports)
@@ -816,13 +817,73 @@ func buildOffer(outward travelfusion.Flight, inbound *travelfusion.Flight) Offer
 	}
 
 	return Offer{
-		OfferID:        offerID(outward, inbound),
-		OutboundFlight: outboundFlight,
-		InboundFlight:  inboundFlight,
-		CurrencyCode:   currency,
-		FareBand:       fareBand(outward, inbound),
-		Price:          price,
+		OfferID:         offerID(outward, inbound),
+		OutboundFlight:  outboundFlight,
+		InboundFlight:   inboundFlight,
+		CurrencyCode:    currency,
+		FareBand:        fareBand(outward, inbound),
+		Price:           price,
+		PassengerPrices: buildPassengerPrices(outward, inbound),
 	}
+}
+
+func buildPassengerPrices(outward travelfusion.Flight, inbound *travelfusion.Flight) PassengerPrices {
+	prices := mapPassengerPrices(outward.PassengerPrices)
+	if inbound == nil {
+		return prices
+	}
+	return addPassengerPrices(prices, mapPassengerPrices(inbound.PassengerPrices))
+}
+
+func mapPassengerPrices(src travelfusion.PassengerPrices) PassengerPrices {
+	return PassengerPrices{
+		Adults:   append([]float64(nil), src.Adults...),
+		Children: append([]float64(nil), src.Children...),
+		Infants:  append([]float64(nil), src.Infants...),
+	}
+}
+
+func addPassengerPrices(left, right PassengerPrices) PassengerPrices {
+	return PassengerPrices{
+		Adults:   addFloatLists(left.Adults, right.Adults),
+		Children: addFloatLists(left.Children, right.Children),
+		Infants:  addFloatLists(left.Infants, right.Infants),
+	}
+}
+
+func addFloatLists(left, right []float64) []float64 {
+	length := len(left)
+	if len(right) > length {
+		length = len(right)
+	}
+	if length == 0 {
+		return nil
+	}
+	result := make([]float64, length)
+	for i := 0; i < length; i++ {
+		if i < len(left) {
+			result[i] += left[i]
+		}
+		if i < len(right) {
+			result[i] += right[i]
+		}
+	}
+	return result
+}
+
+func normalizePassengerPrices(prices PassengerPrices) PassengerPrices {
+	return PassengerPrices{
+		Adults:   nonNilFloatList(prices.Adults),
+		Children: nonNilFloatList(prices.Children),
+		Infants:  nonNilFloatList(prices.Infants),
+	}
+}
+
+func nonNilFloatList(values []float64) []float64 {
+	if values == nil {
+		return []float64{}
+	}
+	return values
 }
 
 func fareBand(outward travelfusion.Flight, inbound *travelfusion.Flight) FareBand {

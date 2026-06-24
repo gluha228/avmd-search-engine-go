@@ -1144,7 +1144,7 @@ components:
             $ref: "#/components/schemas/Offer"
     Offer:
       type: object
-      required: [offer_id, outbound_flight, currency_code, fare_band, price]
+      required: [offer_id, outbound_flight, currency_code, fare_band, price, passenger_prices]
       properties:
         offer_id:
           type: string
@@ -1159,6 +1159,27 @@ components:
         price:
           type: number
           format: double
+        passenger_prices:
+          $ref: "#/components/schemas/PassengerPrices"
+    PassengerPrices:
+      type: object
+      required: [adults, children, infants]
+      properties:
+        adults:
+          type: array
+          items:
+            type: number
+            format: double
+        children:
+          type: array
+          items:
+            type: number
+            format: double
+        infants:
+          type: array
+          items:
+            type: number
+            format: double
     FareBand:
       type: object
       required: [name, features]

@@ -5,6 +5,7 @@ import (
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 )
@@ -363,6 +364,73 @@ func TestEnrichSearchOffersConvertsPricesToDefaultCurrencyWithoutMutatingCachedO
 	}
 	if len(converter.calls) != 2 || converter.calls[0].from != "USD" || converter.calls[0].to != "EUR" {
 		t.Fatalf("unexpected currency conversion calls: %+v", converter.calls)
+	}
+}
+
+func TestEnrichSearchOffersConvertsPassengerPricesToDefaultCurrency(t *testing.T) {
+	converter := &fakeCurrencyConverter{results: []float64{90, 54, 36, 9}}
+	service := NewServiceWithBookingDependencies(fakeTFClient{}, nil, nil, converter, "EUR", nil)
+	offer := Offer{
+		OfferID:        "TF-OUT1",
+		CurrencyCode:   "USD",
+		Price:          100,
+		OutboundFlight: Flight{Price: 100},
+		PassengerPrices: PassengerPrices{
+			Adults:  []float64{60, 40},
+			Infants: []float64{10},
+		},
+	}
+
+	enriched, err := service.EnrichSearchOffers(context.Background(), []Offer{offer}, "en")
+	if err != nil {
+		t.Fatalf("EnrichSearchOffers returned error: %v", err)
+	}
+	if !slices.Equal(enriched[0].PassengerPrices.Adults, []float64{54, 36}) {
+		t.Fatalf("expected converted adult prices, got %+v", enriched[0].PassengerPrices)
+	}
+	if !slices.Equal(enriched[0].PassengerPrices.Infants, []float64{9}) {
+		t.Fatalf("expected converted infant prices, got %+v", enriched[0].PassengerPrices)
+	}
+	if !slices.Equal(offer.PassengerPrices.Adults, []float64{60, 40}) {
+		t.Fatalf("expected cached/raw passenger prices not to mutate, got %+v", offer.PassengerPrices)
+	}
+	if len(converter.calls) != 4 {
+		t.Fatalf("unexpected conversion calls: %+v", converter.calls)
+	}
+}
+
+func TestBuildOfferSumsPassengerPricesForRoundTrip(t *testing.T) {
+	inbound := travelfusion.Flight{
+		ID:       "RET1",
+		Price:    120,
+		Currency: "EUR",
+		PassengerPrices: travelfusion.PassengerPrices{
+			Adults:   []float64{60, 50},
+			Children: []float64{10},
+		},
+	}
+	offer := buildOffer(travelfusion.Flight{
+		ID:       "OUT1",
+		Price:    230,
+		Currency: "EUR",
+		PassengerPrices: travelfusion.PassengerPrices{
+			Adults:   []float64{100, 90},
+			Children: []float64{30},
+			Infants:  []float64{10},
+		},
+	}, &inbound)
+
+	if offer.Price != 350 {
+		t.Fatalf("expected total offer price 350, got %v", offer.Price)
+	}
+	if !slices.Equal(offer.PassengerPrices.Adults, []float64{160, 140}) {
+		t.Fatalf("unexpected adult prices: %+v", offer.PassengerPrices)
+	}
+	if !slices.Equal(offer.PassengerPrices.Children, []float64{40}) {
+		t.Fatalf("unexpected child prices: %+v", offer.PassengerPrices)
+	}
+	if !slices.Equal(offer.PassengerPrices.Infants, []float64{10}) {
+		t.Fatalf("unexpected infant prices: %+v", offer.PassengerPrices)
 	}
 }
 

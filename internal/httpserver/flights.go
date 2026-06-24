@@ -197,12 +197,19 @@ func writeSSEString(w http.ResponseWriter, flusher http.Flusher, event string, d
 }
 
 type sseOffer struct {
-	OfferID        string      `json:"offer_id"`
-	OutboundFlight sseFlight   `json:"outbound_flight"`
-	InboundFlight  *sseFlight  `json:"inbound_flight,omitempty"`
-	CurrencyCode   string      `json:"currency_code"`
-	FareBand       sseFareBand `json:"fare_band"`
-	Price          float64     `json:"price"`
+	OfferID         string             `json:"offer_id"`
+	OutboundFlight  sseFlight          `json:"outbound_flight"`
+	InboundFlight   *sseFlight         `json:"inbound_flight,omitempty"`
+	CurrencyCode    string             `json:"currency_code"`
+	FareBand        sseFareBand        `json:"fare_band"`
+	Price           float64            `json:"price"`
+	PassengerPrices ssePassengerPrices `json:"passenger_prices"`
+}
+
+type ssePassengerPrices struct {
+	Adults   []float64 `json:"adults"`
+	Children []float64 `json:"children"`
+	Infants  []float64 `json:"infants"`
 }
 
 type sseFareBand struct {
@@ -236,11 +243,12 @@ func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 	offers := make([]sseOffer, len(src))
 	for i := range src {
 		offers[i] = sseOffer{
-			OfferID:        src[i].OfferID,
-			OutboundFlight: mapFlight(src[i].OutboundFlight),
-			CurrencyCode:   src[i].CurrencyCode,
-			FareBand:       mapSSEFareBand(src[i].FareBand),
-			Price:          src[i].Price,
+			OfferID:         src[i].OfferID,
+			OutboundFlight:  mapFlight(src[i].OutboundFlight),
+			CurrencyCode:    src[i].CurrencyCode,
+			FareBand:        mapSSEFareBand(src[i].FareBand),
+			Price:           src[i].Price,
+			PassengerPrices: mapSSEPassengerPrices(src[i].PassengerPrices),
 		}
 		if src[i].InboundFlight != nil {
 			inbound := mapFlight(*src[i].InboundFlight)
@@ -248,6 +256,21 @@ func mapOffers(src []flights.EnrichedOffer) []sseOffer {
 		}
 	}
 	return offers
+}
+
+func mapSSEPassengerPrices(src flights.PassengerPrices) ssePassengerPrices {
+	return ssePassengerPrices{
+		Adults:   nonNilSSEFloatList(src.Adults),
+		Children: nonNilSSEFloatList(src.Children),
+		Infants:  nonNilSSEFloatList(src.Infants),
+	}
+}
+
+func nonNilSSEFloatList(values []float64) []float64 {
+	if values == nil {
+		return []float64{}
+	}
+	return values
 }
 
 func mapSSEFareBand(src flights.FareBand) sseFareBand {

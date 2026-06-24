@@ -269,12 +269,13 @@ type FlightSegment struct {
 
 // Offer defines model for Offer.
 type Offer struct {
-	CurrencyCode   string   `json:"currency_code"`
-	FareBand       FareBand `json:"fare_band"`
-	InboundFlight  *Flight  `json:"inbound_flight,omitempty"`
-	OfferId        string   `json:"offer_id"`
-	OutboundFlight Flight   `json:"outbound_flight"`
-	Price          float64  `json:"price"`
+	CurrencyCode    string          `json:"currency_code"`
+	FareBand        FareBand        `json:"fare_band"`
+	InboundFlight   *Flight         `json:"inbound_flight,omitempty"`
+	OfferId         string          `json:"offer_id"`
+	OutboundFlight  Flight          `json:"outbound_flight"`
+	PassengerPrices PassengerPrices `json:"passenger_prices"`
+	Price           float64         `json:"price"`
 }
 
 // PassengerContactData defines model for PassengerContactData.
@@ -319,6 +320,13 @@ type PassengerDataResponse struct {
 type PassengerPhone struct {
 	InternationalCode string `json:"international_code"`
 	Number            string `json:"number"`
+}
+
+// PassengerPrices defines model for PassengerPrices.
+type PassengerPrices struct {
+	Adults   []float64 `json:"adults"`
+	Children []float64 `json:"children"`
+	Infants  []float64 `json:"infants"`
 }
 
 // ProcessTermsSupplierResponse defines model for ProcessTermsSupplierResponse.

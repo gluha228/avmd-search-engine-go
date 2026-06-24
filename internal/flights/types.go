@@ -117,21 +117,29 @@ type AdditionalFieldOptionPrice struct {
 }
 
 type Offer struct {
-	OfferID        string
-	OutboundFlight Flight
-	InboundFlight  *Flight
-	CurrencyCode   string
-	FareBand       FareBand
-	Price          float64
+	OfferID         string
+	OutboundFlight  Flight
+	InboundFlight   *Flight
+	CurrencyCode    string
+	FareBand        FareBand
+	Price           float64
+	PassengerPrices PassengerPrices
 }
 
 type EnrichedOffer struct {
-	OfferID        string
-	OutboundFlight EnrichedFlight
-	InboundFlight  *EnrichedFlight
-	CurrencyCode   string
-	FareBand       FareBand
-	Price          float64
+	OfferID         string
+	OutboundFlight  EnrichedFlight
+	InboundFlight   *EnrichedFlight
+	CurrencyCode    string
+	FareBand        FareBand
+	Price           float64
+	PassengerPrices PassengerPrices
+}
+
+type PassengerPrices struct {
+	Adults   []float64
+	Children []float64
+	Infants  []float64
 }
 
 type FareBand struct {

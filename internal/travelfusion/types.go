@@ -17,8 +17,15 @@ type Flight struct {
 	DurationMinutes    int
 	Price              float64
 	Currency           string
+	PassengerPrices    PassengerPrices
 	Segments           []Segment
 	MinimalTravelClass string
+}
+
+type PassengerPrices struct {
+	Adults   []float64
+	Children []float64
+	Infants  []float64
 }
 
 type Segment struct {

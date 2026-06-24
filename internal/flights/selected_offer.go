@@ -95,6 +95,11 @@ func (s *Service) convertOfferToDefaultCurrency(ctx context.Context, offer Offer
 		offer.Price = price
 	}
 
+	passengerPrices, err := s.convertPassengerPricesToCurrency(ctx, offer.PassengerPrices, source, target)
+	if err != nil {
+		return Offer{}, fmt.Errorf("convert passenger offer prices to %s: %w", target, err)
+	}
+	offer.PassengerPrices = passengerPrices
 	offer.CurrencyCode = target
 	return offer, nil
 }
@@ -106,6 +111,37 @@ func (s *Service) convertFlightToCurrency(ctx context.Context, flight Flight, so
 	}
 	flight.Price = converted
 	return flight, nil
+}
+
+func (s *Service) convertPassengerPricesToCurrency(ctx context.Context, prices PassengerPrices, source, target string) (PassengerPrices, error) {
+	adults, err := s.convertAmountsToCurrency(ctx, prices.Adults, source, target)
+	if err != nil {
+		return PassengerPrices{}, err
+	}
+	children, err := s.convertAmountsToCurrency(ctx, prices.Children, source, target)
+	if err != nil {
+		return PassengerPrices{}, err
+	}
+	infants, err := s.convertAmountsToCurrency(ctx, prices.Infants, source, target)
+	if err != nil {
+		return PassengerPrices{}, err
+	}
+	return PassengerPrices{Adults: adults, Children: children, Infants: infants}, nil
+}
+
+func (s *Service) convertAmountsToCurrency(ctx context.Context, amounts []float64, source, target string) ([]float64, error) {
+	if len(amounts) == 0 {
+		return amounts, nil
+	}
+	converted := make([]float64, len(amounts))
+	for i, amount := range amounts {
+		value, err := s.currency.Convert(ctx, amount, source, target)
+		if err != nil {
+			return nil, err
+		}
+		converted[i] = value
+	}
+	return converted, nil
 }
 
 func normalizeRequiredParameters(raw []travelfusion.RequiredParameter) []TFRequiredParameterSnapshot {

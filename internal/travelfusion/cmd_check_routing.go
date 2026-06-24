@@ -82,8 +82,14 @@ type flightID struct {
 }
 
 type price struct {
-	Amount   float64 `xml:"Amount"`
-	Currency string  `xml:"Currency"`
+	Amount             float64          `xml:"Amount"`
+	Currency           string           `xml:"Currency"`
+	PassengerPriceList []passengerPrice `xml:"PassengerPriceList>PassengerPrice"`
+}
+
+type passengerPrice struct {
+	Amount float64 `xml:"Amount"`
+	Age    int     `xml:"Age"`
 }
 
 func newCheckRoutingCommand(xmlLoginID, loginID, routingID string) checkRoutingCommand {
@@ -145,6 +151,7 @@ func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn boo
 	flightPrice := src.Price
 	if flightPrice.Amount == 0 && groupPrice.Amount != 0 {
 		flightPrice.Currency = groupPrice.Currency
+		flightPrice.PassengerPriceList = groupPrice.PassengerPriceList
 		if !hasReturn || !isReturn {
 			flightPrice.Amount = groupPrice.Amount
 		}
@@ -187,9 +194,27 @@ func convertFlight(src xmlFlight, groupPrice price, hasReturn bool, isReturn boo
 		DurationMinutes:    duration,
 		Price:              flightPrice.Amount,
 		Currency:           strings.TrimSpace(flightPrice.Currency),
+		PassengerPrices:    classifyPassengerPrices(flightPrice.PassengerPriceList),
 		Segments:           segments,
 		MinimalTravelClass: minimalTravelClass(segments),
 	}
+}
+
+func classifyPassengerPrices(prices []passengerPrice) PassengerPrices {
+	var result PassengerPrices
+	for _, price := range prices {
+		switch price.Age {
+		case 0:
+			result.Infants = append(result.Infants, price.Amount)
+		case 7:
+			result.Children = append(result.Children, price.Amount)
+		case 30:
+			result.Adults = append(result.Adults, price.Amount)
+		default:
+			result.Adults = append(result.Adults, price.Amount)
+		}
+	}
+	return result
 }
 
 func locationCode(loc xmlLocation) string {

@@ -141,17 +141,33 @@ func mapSelectedOffer(src flights.SelectedOffer, offer flights.EnrichedOffer) ap
 
 func mapAPIOffer(src flights.EnrichedOffer) api.Offer {
 	offer := api.Offer{
-		OfferId:        src.OfferID,
-		OutboundFlight: mapAPIFlight(src.OutboundFlight),
-		CurrencyCode:   src.CurrencyCode,
-		FareBand:       mapAPIFareBand(src.FareBand),
-		Price:          src.Price,
+		OfferId:         src.OfferID,
+		OutboundFlight:  mapAPIFlight(src.OutboundFlight),
+		CurrencyCode:    src.CurrencyCode,
+		FareBand:        mapAPIFareBand(src.FareBand),
+		Price:           src.Price,
+		PassengerPrices: mapAPIPassengerPrices(src.PassengerPrices),
 	}
 	if src.InboundFlight != nil {
 		inbound := mapAPIFlight(*src.InboundFlight)
 		offer.InboundFlight = &inbound
 	}
 	return offer
+}
+
+func mapAPIPassengerPrices(src flights.PassengerPrices) api.PassengerPrices {
+	return api.PassengerPrices{
+		Adults:   nonNilAPIFloatList(src.Adults),
+		Children: nonNilAPIFloatList(src.Children),
+		Infants:  nonNilAPIFloatList(src.Infants),
+	}
+}
+
+func nonNilAPIFloatList(values []float64) []float64 {
+	if values == nil {
+		return []float64{}
+	}
+	return values
 }
 
 func mapAPIFareBand(src flights.FareBand) api.FareBand {
