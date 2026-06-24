@@ -10,6 +10,7 @@ import (
 	"avmd-search-engine-go/internal/flights"
 	flightsession "avmd-search-engine-go/internal/flights/session"
 	"avmd-search-engine-go/internal/geo"
+	"avmd-search-engine-go/internal/redishealth"
 	"avmd-search-engine-go/internal/supplierroutes"
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
@@ -21,7 +22,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
-	"github.com/redis/go-redis/v9"
 )
 
 type HttpServer struct {
@@ -43,7 +43,7 @@ func NewHttpServer(cfg *config.Config, logger *slog.Logger) *HttpServer {
 	}
 }
 
-func (s *HttpServer) InitHandlers() {
+func (s *HttpServer) InitHandlers() error {
 	tfClient := travelfusion.NewClient(travelfusion.Config{
 		BaseURL:             s.cfg.TFBaseURL,
 		XmlLoginID:          s.cfg.TFXmlLoginID,
@@ -52,11 +52,8 @@ func (s *HttpServer) InitHandlers() {
 		PollingAttempts:     s.cfg.TFPollingAttempts,
 		PollingDelaySeconds: s.cfg.TFPollingDelaySeconds,
 	}, s.logger)
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     s.cfg.RedisAddr,
-		Password: s.cfg.RedisPassword,
-		DB:       s.cfg.RedisDB,
-	})
+	redishealth.ConfigureLogger(s.logger)
+	redisClient := redishealth.NewClient(s.cfg)
 	db, err := dbstore.CreateConnection(context.Background(), s.cfg)
 	sessionStore := flightsession.NewRedisStore(
 		redisClient,
@@ -108,6 +105,7 @@ func (s *HttpServer) InitHandlers() {
 		s.cfg.DefaultCurrencyCode,
 		s.logger,
 	)
+	return nil
 }
 
 func (s *HttpServer) CreateHandler() http.Handler {

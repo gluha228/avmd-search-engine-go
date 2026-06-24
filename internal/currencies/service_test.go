@@ -3,6 +3,7 @@ package currencies
 import (
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -16,6 +17,7 @@ type fakeTFClient struct {
 type fakeStore struct {
 	rates      map[string]float64
 	lastUpdate *time.Time
+	err        error
 }
 
 func (c *fakeTFClient) GetCurrencies(context.Context) (map[string]travelfusion.Currency, error) {
@@ -37,6 +39,9 @@ func (s *fakeStore) SetRate(_ context.Context, currencyCode string, rate float64
 }
 
 func (s *fakeStore) LastUpdate(context.Context) (*time.Time, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
 	return s.lastUpdate, nil
 }
 
@@ -140,6 +145,23 @@ func TestRefreshIfNeededDoesNotCallTFOnRepeatedRestartBeforeUpdateTime(t *testin
 
 	if err := service.RefreshIfNeeded(context.Background()); err != nil {
 		t.Fatalf("RefreshIfNeeded returned error: %v", err)
+	}
+	if client.calls != 0 {
+		t.Fatalf("expected TF not to be called, got %d calls", client.calls)
+	}
+}
+
+func TestRefreshIfNeededDoesNotCallTFWhenStatusCheckFails(t *testing.T) {
+	client := &fakeTFClient{currencies: map[string]travelfusion.Currency{
+		"EUR": {Code: "EUR", USDRate: 0.9},
+	}}
+	service := NewService(client, &fakeStore{
+		rates: map[string]float64{},
+		err:   errors.New("redis unavailable"),
+	}, Config{UpdateTime: "03:00"}, nil)
+
+	if err := service.RefreshIfNeeded(context.Background()); err == nil {
+		t.Fatal("expected RefreshIfNeeded to return status check error")
 	}
 	if client.calls != 0 {
 		t.Fatalf("expected TF not to be called, got %d calls", client.calls)

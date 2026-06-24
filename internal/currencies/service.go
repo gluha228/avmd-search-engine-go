@@ -100,7 +100,7 @@ func (s *Service) RefreshIfNeeded(ctx context.Context) error {
 		if s.logger != nil {
 			s.logger.Error("error checking currency cache update status", "error", err)
 		}
-		needed = true
+		return err
 	}
 	if !needed {
 		if s.logger != nil {
@@ -151,7 +151,7 @@ func (s *Service) Refresh(ctx context.Context) error {
 func (s *Service) NeedsRefresh(ctx context.Context) (bool, error) {
 	lastUpdate, err := s.store.LastUpdate(ctx)
 	if err != nil {
-		return true, err
+		return false, err
 	}
 	if lastUpdate == nil {
 		return true, nil

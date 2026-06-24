@@ -3,6 +3,7 @@ package supplierroutes
 import (
 	"avmd-search-engine-go/internal/travelfusion"
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -10,6 +11,7 @@ import (
 type fakeTFClient struct {
 	suppliers []string
 	routes    map[string]*travelfusion.SupplierRoutesResult
+	calls     int
 }
 
 type fakeStore struct {
@@ -17,13 +19,15 @@ type fakeStore struct {
 	cityRoutes    []string
 	knownAirports []string
 	lastUpdate    *time.Time
+	err           error
 }
 
-func (c fakeTFClient) GetBranchSupplierList(context.Context) ([]string, error) {
+func (c *fakeTFClient) GetBranchSupplierList(context.Context) ([]string, error) {
+	c.calls++
 	return c.suppliers, nil
 }
 
-func (c fakeTFClient) ListSupplierRoutes(_ context.Context, supplier string, _ bool) (*travelfusion.SupplierRoutesResult, error) {
+func (c *fakeTFClient) ListSupplierRoutes(_ context.Context, supplier string, _ bool) (*travelfusion.SupplierRoutesResult, error) {
 	return c.routes[supplier], nil
 }
 
@@ -47,6 +51,9 @@ func (s *fakeStore) ReplaceRoutes(_ context.Context, airportRoutes, cityRoutes, 
 }
 
 func (s *fakeStore) LastUpdate(context.Context) (*time.Time, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
 	return s.lastUpdate, nil
 }
 
@@ -58,7 +65,7 @@ func (s *fakeStore) SetLastUpdate(_ context.Context, t time.Time) error {
 func TestRefreshCollectsRoutesAndKnownAirports(t *testing.T) {
 	store := &fakeStore{}
 	now := time.Date(2026, 7, 1, 4, 0, 0, 0, time.UTC)
-	service := NewService(fakeTFClient{
+	service := NewService(&fakeTFClient{
 		suppliers: []string{"s1", "s2"},
 		routes: map[string]*travelfusion.SupplierRoutesResult{
 			"s1": {AirportRoutes: []string{"OTPCLJ", "CLJOTP"}, CityRoutes: []string{"LONPAR"}},
@@ -83,7 +90,7 @@ func TestRefreshCollectsRoutesAndKnownAirports(t *testing.T) {
 
 func TestNeedsRefreshDoesNotRefreshAgainBeforeTodayUpdateTime(t *testing.T) {
 	lastUpdate := time.Date(2026, 7, 1, 0, 10, 0, 0, time.UTC)
-	service := NewService(fakeTFClient{}, &fakeStore{lastUpdate: &lastUpdate}, Config{UpdateTime: "04:00"}, nil)
+	service := NewService(&fakeTFClient{}, &fakeStore{lastUpdate: &lastUpdate}, Config{UpdateTime: "04:00"}, nil)
 	service.now = func() time.Time { return time.Date(2026, 7, 1, 0, 20, 0, 0, time.UTC) }
 
 	needed, err := service.NeedsRefresh(context.Background())
@@ -96,7 +103,7 @@ func TestNeedsRefreshDoesNotRefreshAgainBeforeTodayUpdateTime(t *testing.T) {
 }
 
 func TestRouteLookupNormalizesCodes(t *testing.T) {
-	service := NewService(fakeTFClient{}, &fakeStore{
+	service := NewService(&fakeTFClient{}, &fakeStore{
 		airportRoutes: []string{"OTPCLJ"},
 		knownAirports: []string{"OTP"},
 	}, Config{}, nil)
@@ -106,6 +113,18 @@ func TestRouteLookupNormalizesCodes(t *testing.T) {
 	}
 	if !service.IsValidAirportRoute(context.Background(), "otp", "clj") {
 		t.Fatal("expected route lookup to normalize codes")
+	}
+}
+
+func TestRefreshIfNeededDoesNotCallTFWhenStatusCheckFails(t *testing.T) {
+	client := &fakeTFClient{suppliers: []string{"s1"}}
+	service := NewService(client, &fakeStore{err: errors.New("redis unavailable")}, Config{UpdateTime: "04:00"}, nil)
+
+	if err := service.RefreshIfNeeded(context.Background()); err == nil {
+		t.Fatal("expected RefreshIfNeeded to return status check error")
+	}
+	if client.calls != 0 {
+		t.Fatalf("expected TF not to be called, got %d calls", client.calls)
 	}
 }
 
