@@ -1,7 +1,9 @@
 package travelfusion
 
 import (
+	"context"
 	"encoding/xml"
+	"fmt"
 	"time"
 )
 
@@ -58,38 +60,49 @@ type startRoutingResponse struct {
 	RouterList []router `xml:"RouterList>Router"`
 }
 
-func buildStartRoutingXML(xmlLoginID, loginID string, timeoutSeconds int, req SearchRequest) ([]byte, error) {
-	travellers := buildTravellers(req)
-
-	cmd := commandListStartRouting{
-		StartRouting: startRoutingCommand{
-			XmlLoginID: xmlLoginID,
-			LoginID:    loginID,
-			Mode:       "plane",
-			Origin: location{
-				Descriptor: req.DepartureAirportCode,
-				Type:       "airportcode",
-				Radius:     0,
-			},
-			Destination: location{
-				Descriptor: req.ArrivalAirportCode,
-				Type:       "airportcode",
-				Radius:     0,
-			},
-			OutwardDates:       buildRoutingDates(req.DepartureDate),
-			MaxChanges:         10,
-			MaxHops:            11,
-			Timeout:            timeoutSeconds,
-			TravellerList:      travellerList{Travellers: travellers},
-			IncrementalResults: true,
+func newStartRoutingCommand(xmlLoginID, loginID string, timeoutSeconds int, req SearchRequest) startRoutingCommand {
+	cmd := startRoutingCommand{
+		XmlLoginID: xmlLoginID,
+		LoginID:    loginID,
+		Mode:       "plane",
+		Origin: location{
+			Descriptor: req.DepartureAirportCode,
+			Type:       "airportcode",
+			Radius:     0,
 		},
+		Destination: location{
+			Descriptor: req.ArrivalAirportCode,
+			Type:       "airportcode",
+			Radius:     0,
+		},
+		OutwardDates:       buildRoutingDates(req.DepartureDate),
+		MaxChanges:         10,
+		MaxHops:            11,
+		Timeout:            timeoutSeconds,
+		TravellerList:      travellerList{Travellers: buildTravellers(req)},
+		IncrementalResults: true,
 	}
 	if req.ReturnDate != nil {
 		returnDates := buildRoutingDates(*req.ReturnDate)
-		cmd.StartRouting.ReturnDates = &returnDates
+		cmd.ReturnDates = &returnDates
 	}
+	return cmd
+}
 
-	return xml.Marshal(cmd)
+func (c *Client) startRouting(ctx context.Context, cmd startRoutingCommand) (startRoutingResponse, error) {
+	payload, err := xml.Marshal(commandListStartRouting{StartRouting: cmd})
+	if err != nil {
+		return startRoutingResponse{}, fmt.Errorf("build start routing request: %w", err)
+	}
+	body, err := c.postXML(ctx, "StartRouting", payload)
+	if err != nil {
+		return startRoutingResponse{}, fmt.Errorf("start routing: %w", err)
+	}
+	var resp commandListStartRoutingResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return startRoutingResponse{}, fmt.Errorf("parse start routing response: %w", err)
+	}
+	return resp.StartRouting, nil
 }
 
 func buildTravellers(req SearchRequest) []traveller {

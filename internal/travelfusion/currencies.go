@@ -1,42 +1,26 @@
 package travelfusion
 
 import (
-	"encoding/xml"
+	"context"
 	"strings"
 )
 
-type commandListGetCurrencies struct {
-	XMLName       xml.Name             `xml:"CommandList"`
-	GetCurrencies getCurrenciesCommand `xml:"GetCurrencies"`
+type Currency struct {
+	Name    string
+	Code    string
+	USDRate float64
 }
 
-type getCurrenciesCommand struct {
-	XmlLoginID string `xml:"XmlLoginId"`
-	LoginID    string `xml:"LoginId"`
-}
+func (c *Client) GetCurrencies(ctx context.Context) (map[string]Currency, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
 
-type commandListGetCurrenciesResponse struct {
-	XMLName       xml.Name              `xml:"CommandList"`
-	GetCurrencies getCurrenciesResponse `xml:"GetCurrencies"`
-}
-
-type getCurrenciesResponse struct {
-	CurrencyList []xmlCurrency `xml:"CurrencyList>Currency"`
-}
-
-type xmlCurrency struct {
-	Name    string  `xml:"Name"`
-	Code    string  `xml:"Code"`
-	USDRate float64 `xml:"UsdRate"`
-}
-
-func buildGetCurrenciesXML(xmlLoginID, loginID string) ([]byte, error) {
-	return xml.Marshal(commandListGetCurrencies{
-		GetCurrencies: getCurrenciesCommand{
-			XmlLoginID: xmlLoginID,
-			LoginID:    loginID,
-		},
-	})
+	resp, err := c.getCurrencies(ctx, newGetCurrenciesCommand(c.xmlLoginID, c.loginID))
+	if err != nil {
+		return nil, err
+	}
+	return mapCurrencies(resp), nil
 }
 
 func mapCurrencies(resp getCurrenciesResponse) map[string]Currency {

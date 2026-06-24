@@ -1,7 +1,7 @@
 package travelfusion
 
 import (
-	"encoding/xml"
+	"context"
 	"strings"
 )
 
@@ -10,65 +10,39 @@ type SupplierRoutesResult struct {
 	CityRoutes    []string
 }
 
-type commandListGetBranchSupplierList struct {
-	XMLName               xml.Name                     `xml:"CommandList"`
-	GetBranchSupplierList getBranchSupplierListCommand `xml:"GetBranchSupplierList"`
+func (c *Client) GetBranchSupplierList(ctx context.Context) ([]string, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
+
+	resp, err := c.getBranchSupplierList(ctx, newGetBranchSupplierListCommand(c.xmlLoginID, c.loginID))
+	if err != nil {
+		return nil, err
+	}
+
+	suppliers := make([]string, 0, len(resp.Suppliers))
+	for _, supplier := range resp.Suppliers {
+		supplier = strings.TrimSpace(supplier)
+		if supplier != "" {
+			suppliers = append(suppliers, supplier)
+		}
+	}
+	return suppliers, nil
 }
 
-type getBranchSupplierListCommand struct {
-	XmlLoginID string `xml:"XmlLoginId"`
-	LoginID    string `xml:"LoginId"`
-}
+func (c *Client) ListSupplierRoutes(ctx context.Context, supplier string, oneWayOnlyAirportRoutes bool) (*SupplierRoutesResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
 
-type commandListGetBranchSupplierListResponse struct {
-	XMLName               xml.Name                      `xml:"CommandList"`
-	GetBranchSupplierList getBranchSupplierListResponse `xml:"GetBranchSupplierList"`
-}
-
-type getBranchSupplierListResponse struct {
-	Suppliers []string `xml:"BranchSupplierList>Supplier"`
-}
-
-type commandListListSupplierRoutes struct {
-	XMLName            xml.Name                  `xml:"CommandList"`
-	ListSupplierRoutes listSupplierRoutesCommand `xml:"ListSupplierRoutes"`
-}
-
-type listSupplierRoutesCommand struct {
-	XmlLoginID              string `xml:"XmlLoginId"`
-	LoginID                 string `xml:"LoginId"`
-	Supplier                string `xml:"Supplier"`
-	OneWayOnlyAirportRoutes bool   `xml:"OneWayOnlyAirportRoutes"`
-}
-
-type commandListListSupplierRoutesResponse struct {
-	XMLName            xml.Name                   `xml:"CommandList"`
-	ListSupplierRoutes listSupplierRoutesResponse `xml:"ListSupplierRoutes"`
-}
-
-type listSupplierRoutesResponse struct {
-	AirportRoutes string `xml:"RouteList>AirportRoutes"`
-	CityRoutes    string `xml:"RouteList>CityRoutes"`
-}
-
-func buildGetBranchSupplierListXML(xmlLoginID, loginID string) ([]byte, error) {
-	return xml.Marshal(commandListGetBranchSupplierList{
-		GetBranchSupplierList: getBranchSupplierListCommand{
-			XmlLoginID: xmlLoginID,
-			LoginID:    loginID,
-		},
-	})
-}
-
-func buildListSupplierRoutesXML(xmlLoginID, loginID, supplier string, oneWayOnlyAirportRoutes bool) ([]byte, error) {
-	return xml.Marshal(commandListListSupplierRoutes{
-		ListSupplierRoutes: listSupplierRoutesCommand{
-			XmlLoginID:              xmlLoginID,
-			LoginID:                 loginID,
-			Supplier:                supplier,
-			OneWayOnlyAirportRoutes: oneWayOnlyAirportRoutes,
-		},
-	})
+	resp, err := c.listSupplierRoutes(ctx, newListSupplierRoutesCommand(c.xmlLoginID, c.loginID, supplier, oneWayOnlyAirportRoutes))
+	if err != nil {
+		return nil, err
+	}
+	return &SupplierRoutesResult{
+		AirportRoutes: parseRouteCodes(resp.AirportRoutes),
+		CityRoutes:    parseRouteCodes(resp.CityRoutes),
+	}, nil
 }
 
 func parseRouteCodes(raw string) []string {

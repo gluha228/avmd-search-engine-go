@@ -17,15 +17,15 @@ func TestBuildStartRoutingXML(t *testing.T) {
 	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	returnDate := time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC)
 
-	payload, err := buildStartRoutingXML("xml-login", "login", 60, SearchRequest{
+	payload, err := marshalStartRoutingCommand(newStartRoutingCommand("xml-login", "login", 60, SearchRequest{
 		DepartureAirportCode: "KIV",
 		ArrivalAirportCode:   "LON",
 		DepartureDate:        departure,
 		ReturnDate:           &returnDate,
 		AdultCount:           2,
-	})
+	}))
 	if err != nil {
-		t.Fatalf("buildStartRoutingXML returned error: %v", err)
+		t.Fatalf("marshalStartRoutingCommand returned error: %v", err)
 	}
 
 	xmlBody := string(payload)
@@ -60,16 +60,16 @@ func TestBuildStartRoutingXML(t *testing.T) {
 func TestBuildStartRoutingXMLAddsChildrenAndInfants(t *testing.T) {
 	departure := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 
-	payload, err := buildStartRoutingXML("xml-login", "login", 60, SearchRequest{
+	payload, err := marshalStartRoutingCommand(newStartRoutingCommand("xml-login", "login", 60, SearchRequest{
 		DepartureAirportCode: "KIV",
 		ArrivalAirportCode:   "LON",
 		DepartureDate:        departure,
 		AdultCount:           1,
 		ChildCount:           1,
 		InfantCount:          1,
-	})
+	}))
 	if err != nil {
-		t.Fatalf("buildStartRoutingXML returned error: %v", err)
+		t.Fatalf("marshalStartRoutingCommand returned error: %v", err)
 	}
 
 	xmlBody := string(payload)
@@ -80,10 +80,30 @@ func TestBuildStartRoutingXMLAddsChildrenAndInfants(t *testing.T) {
 	}
 }
 
+func marshalStartRoutingCommand(cmd startRoutingCommand) ([]byte, error) {
+	return xml.Marshal(commandListStartRouting{StartRouting: cmd})
+}
+
+func marshalGetCurrenciesCommand(cmd getCurrenciesCommand) ([]byte, error) {
+	return xml.Marshal(commandListGetCurrencies{GetCurrencies: cmd})
+}
+
+func marshalProcessDetailsCommand(cmd processDetailsCommand) ([]byte, error) {
+	return xml.Marshal(commandListProcessDetails{ProcessDetails: cmd})
+}
+
+func marshalGetBranchSupplierListCommand(cmd getBranchSupplierListCommand) ([]byte, error) {
+	return xml.Marshal(commandListGetBranchSupplierList{GetBranchSupplierList: cmd})
+}
+
+func marshalListSupplierRoutesCommand(cmd listSupplierRoutesCommand) ([]byte, error) {
+	return xml.Marshal(commandListListSupplierRoutes{ListSupplierRoutes: cmd})
+}
+
 func TestBuildGetCurrenciesXML(t *testing.T) {
-	payload, err := buildGetCurrenciesXML("xml-login", "login")
+	payload, err := marshalGetCurrenciesCommand(newGetCurrenciesCommand("xml-login", "login"))
 	if err != nil {
-		t.Fatalf("buildGetCurrenciesXML returned error: %v", err)
+		t.Fatalf("marshalGetCurrenciesCommand returned error: %v", err)
 	}
 
 	xmlBody := string(payload)
@@ -99,13 +119,13 @@ func TestBuildGetCurrenciesXML(t *testing.T) {
 }
 
 func TestBuildProcessDetailsXML(t *testing.T) {
-	payload, err := buildProcessDetailsXML("xml-login", "login", ProcessDetailsRequest{
+	payload, err := marshalProcessDetailsCommand(newProcessDetailsCommand("xml-login", "login", ProcessDetailsRequest{
 		RoutingID: "RID",
 		OutwardID: "OUT1",
 		ReturnID:  "RET1",
-	})
+	}))
 	if err != nil {
-		t.Fatalf("buildProcessDetailsXML returned error: %v", err)
+		t.Fatalf("marshalProcessDetailsCommand returned error: %v", err)
 	}
 
 	xmlBody := string(payload)
@@ -180,9 +200,9 @@ func TestMapCurrencies(t *testing.T) {
 }
 
 func TestBuildGetBranchSupplierListXML(t *testing.T) {
-	payload, err := buildGetBranchSupplierListXML("xml-login", "login")
+	payload, err := marshalGetBranchSupplierListCommand(newGetBranchSupplierListCommand("xml-login", "login"))
 	if err != nil {
-		t.Fatalf("buildGetBranchSupplierListXML returned error: %v", err)
+		t.Fatalf("marshalGetBranchSupplierListCommand returned error: %v", err)
 	}
 	xmlBody := string(payload)
 	for _, part := range []string{
@@ -197,9 +217,9 @@ func TestBuildGetBranchSupplierListXML(t *testing.T) {
 }
 
 func TestBuildListSupplierRoutesXML(t *testing.T) {
-	payload, err := buildListSupplierRoutesXML("xml-login", "login", "easyjet", false)
+	payload, err := marshalListSupplierRoutesCommand(newListSupplierRoutesCommand("xml-login", "login", "easyjet", false))
 	if err != nil {
-		t.Fatalf("buildListSupplierRoutesXML returned error: %v", err)
+		t.Fatalf("marshalListSupplierRoutesCommand returned error: %v", err)
 	}
 	xmlBody := string(payload)
 	for _, part := range []string{

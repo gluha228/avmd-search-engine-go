@@ -1,7 +1,9 @@
 package travelfusion
 
 import (
+	"context"
 	"encoding/xml"
+	"fmt"
 	"strings"
 )
 
@@ -84,14 +86,28 @@ type price struct {
 	Currency string  `xml:"Currency"`
 }
 
-func buildCheckRoutingXML(xmlLoginID, loginID, routingID string) ([]byte, error) {
-	return xml.Marshal(commandListCheckRouting{
-		CheckRouting: checkRoutingCommand{
-			XmlLoginID: xmlLoginID,
-			LoginID:    loginID,
-			RoutingID:  routingID,
-		},
-	})
+func newCheckRoutingCommand(xmlLoginID, loginID, routingID string) checkRoutingCommand {
+	return checkRoutingCommand{
+		XmlLoginID: xmlLoginID,
+		LoginID:    loginID,
+		RoutingID:  routingID,
+	}
+}
+
+func (c *Client) checkRouting(ctx context.Context, cmd checkRoutingCommand) (checkRoutingResponse, error) {
+	payload, err := xml.Marshal(commandListCheckRouting{CheckRouting: cmd})
+	if err != nil {
+		return checkRoutingResponse{}, fmt.Errorf("build check routing request: %w", err)
+	}
+	body, err := c.postXML(ctx, "CheckRouting", payload)
+	if err != nil {
+		return checkRoutingResponse{}, fmt.Errorf("check routing: %w", err)
+	}
+	var resp commandListCheckRoutingResponse
+	if err := xml.Unmarshal(body, &resp); err != nil {
+		return checkRoutingResponse{}, fmt.Errorf("parse check routing response: %w", err)
+	}
+	return resp.CheckRouting, nil
 }
 
 func extractFlights(resp checkRoutingResponse) ([]Flight, []Flight) {

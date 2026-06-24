@@ -1,57 +1,41 @@
 package travelfusion
 
 import (
-	"encoding/xml"
+	"context"
 	"strings"
 )
 
-type commandListProcessDetails struct {
-	XMLName        xml.Name              `xml:"CommandList"`
-	ProcessDetails processDetailsCommand `xml:"ProcessDetails"`
+type ProcessDetailsRequest struct {
+	RoutingID string
+	OutwardID string
+	ReturnID  string
 }
 
-type processDetailsCommand struct {
-	XmlLoginID            string `xml:"XmlLoginId"`
-	LoginID               string `xml:"LoginId"`
-	RoutingID             string `xml:"RoutingId"`
-	OutwardID             string `xml:"OutwardId"`
-	ReturnID              string `xml:"ReturnId,omitempty"`
-	HandoffParametersOnly bool   `xml:"HandoffParametersOnly,omitempty"`
+type ProcessDetailsResult struct {
+	RoutingID          string
+	RequiredParameters []RequiredParameter
 }
 
-type commandListProcessDetailsResponse struct {
-	ProcessDetails processDetailsResponse `xml:"ProcessDetails"`
+type RequiredParameter struct {
+	Name                string
+	Value               string
+	Type                string
+	DisplayText         string
+	PerPassenger        *bool
+	IsOptional          *bool
+	IsSometimesRequired bool
 }
 
-type processDetailsResponse struct {
-	RoutingID string               `xml:"RoutingId"`
-	Router    processDetailsRouter `xml:"Router"`
-}
+func (c *Client) ProcessDetails(ctx context.Context, req ProcessDetailsRequest) (*ProcessDetailsResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
+	}
 
-type processDetailsRouter struct {
-	RequiredParameters []requiredParameterXML `xml:"RequiredParameterList>RequiredParameter"`
-}
-
-type requiredParameterXML struct {
-	Name                string  `xml:"Name"`
-	Value               string  `xml:"Value"`
-	Type                string  `xml:"Type"`
-	DisplayText         string  `xml:"DisplayText"`
-	PerPassenger        *bool   `xml:"PerPassenger"`
-	IsOptional          *bool   `xml:"IsOptional"`
-	IsSometimesRequired *string `xml:"IsSometimesRequired"`
-}
-
-func buildProcessDetailsXML(xmlLoginID, loginID string, req ProcessDetailsRequest) ([]byte, error) {
-	return xml.Marshal(commandListProcessDetails{
-		ProcessDetails: processDetailsCommand{
-			XmlLoginID: xmlLoginID,
-			LoginID:    loginID,
-			RoutingID:  req.RoutingID,
-			OutwardID:  req.OutwardID,
-			ReturnID:   req.ReturnID,
-		},
-	})
+	resp, err := c.processDetails(ctx, newProcessDetailsCommand(c.xmlLoginID, c.loginID, req))
+	if err != nil {
+		return nil, err
+	}
+	return mapProcessDetails(resp), nil
 }
 
 func mapProcessDetails(resp processDetailsResponse) *ProcessDetailsResult {

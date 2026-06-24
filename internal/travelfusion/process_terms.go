@@ -1,170 +1,84 @@
 package travelfusion
 
 import (
-	"encoding/xml"
+	"context"
 	"strings"
 )
 
-type commandListProcessTerms struct {
-	XMLName      xml.Name            `xml:"CommandList"`
-	ProcessTerms processTermsCommand `xml:"ProcessTerms"`
+type ProcessTermsRequest struct {
+	RoutingID      string
+	OutwardID      string
+	ReturnID       string
+	BookingProfile BookingProfile
 }
 
-type processTermsCommand struct {
-	XmlLoginID     string                 `xml:"XmlLoginId"`
-	LoginID        string                 `xml:"LoginId"`
-	RoutingID      string                 `xml:"RoutingId"`
-	OutwardID      string                 `xml:"OutwardId"`
-	ReturnID       string                 `xml:"ReturnId,omitempty"`
-	BookingProfile processTermsProfileXML `xml:"BookingProfile"`
+type BookingProfile struct {
+	Travellers               []Traveller
+	ContactDetails           ContactDetails
+	CustomSupplierParameters []CustomSupplierParameter
 }
 
-type processTermsProfileXML struct {
-	TravellerList            processTermsTravellerList   `xml:"TravellerList"`
-	ContactDetails           processTermsContactXML      `xml:"ContactDetails"`
-	CustomSupplierParameters customSupplierParameterList `xml:"CustomSupplierParameterList"`
+type Traveller struct {
+	Age                      int
+	Name                     Name
+	CustomSupplierParameters []CustomSupplierParameter
 }
 
-type processTermsTravellerList struct {
-	Travellers []processTermsTravellerXML `xml:"Traveller"`
+type Name struct {
+	Title     string
+	NameParts []string
 }
 
-type processTermsTravellerXML struct {
-	Age                      int                         `xml:"Age"`
-	Name                     processTermsNameXML         `xml:"Name"`
-	CustomSupplierParameters customSupplierParameterList `xml:"CustomSupplierParameterList"`
+type ContactDetails struct {
+	Name        Name
+	Address     Address
+	MobilePhone Phone
+	Email       string
 }
 
-type processTermsNameXML struct {
-	Title        string       `xml:"Title"`
-	NamePartList namePartList `xml:"NamePartList"`
+type Address struct {
+	City        string
+	Street      string
+	CountryCode string
+	Postcode    string
+	Province    string
 }
 
-type namePartList struct {
-	NameParts []string `xml:"NamePart"`
+type Phone struct {
+	InternationalCode string
+	Number            string
 }
 
-type processTermsContactXML struct {
-	Name        processTermsNameXML  `xml:"Name"`
-	Address     processTermsAddress  `xml:"Address"`
-	MobilePhone processTermsPhoneXML `xml:"MobilePhone"`
-	Email       string               `xml:"Email"`
+type CustomSupplierParameter struct {
+	Name  string
+	Value string
 }
 
-type processTermsAddress struct {
-	Street      string `xml:"Street"`
-	City        string `xml:"City"`
-	Province    string `xml:"Province"`
-	Postcode    string `xml:"Postcode"`
-	CountryCode string `xml:"CountryCode"`
+type ProcessTermsResult struct {
+	RoutingID                           string
+	TFBookingReference                  string
+	FinalAmount                         *float64
+	FinalCurrency                       string
+	SupplierVisualAuthorisationImageURL string
+	SupplierResponses                   []SupplierResponse
 }
 
-type processTermsPhoneXML struct {
-	InternationalCode string `xml:"InternationalCode"`
-	Number            string `xml:"Number"`
+type SupplierResponse struct {
+	Name string
+	Type string
+	Data string
 }
 
-type customSupplierParameterList struct {
-	Parameters []customSupplierParameterXML `xml:"CustomSupplierParameter"`
-}
-
-type customSupplierParameterXML struct {
-	Name  string `xml:"Name"`
-	Value string `xml:"Value"`
-}
-
-type commandListProcessTermsResponse struct {
-	ProcessTerms processTermsResponse `xml:"ProcessTerms"`
-}
-
-type processTermsResponse struct {
-	RoutingID                           string                `xml:"RoutingId"`
-	TFBookingReference                  string                `xml:"TFBookingReference"`
-	Price                               price                 `xml:"Price"`
-	Router                              processTermsRouter    `xml:"Router"`
-	SupplierResponseList                []supplierResponseXML `xml:"SupplierResponseList>SupplierResponse"`
-	SupplierVisualAuthorisationImageURL string                `xml:"SupplierVisualAuthorisationImageURL"`
-}
-
-type processTermsRouter struct {
-	GroupList []processTermsGroup `xml:"GroupList>Group"`
-}
-
-type processTermsGroup struct {
-	Price price `xml:"Price"`
-}
-
-type supplierResponseXML struct {
-	Name string `xml:"Name"`
-	Type string `xml:"Type"`
-	Data string `xml:"Data"`
-}
-
-func buildProcessTermsXML(xmlLoginID, loginID string, req ProcessTermsRequest) ([]byte, error) {
-	return xml.Marshal(commandListProcessTerms{
-		ProcessTerms: processTermsCommand{
-			XmlLoginID:     xmlLoginID,
-			LoginID:        loginID,
-			RoutingID:      req.RoutingID,
-			OutwardID:      req.OutwardID,
-			ReturnID:       req.ReturnID,
-			BookingProfile: mapProcessTermsProfile(req.BookingProfile),
-		},
-	})
-}
-
-func mapProcessTermsProfile(profile BookingProfile) processTermsProfileXML {
-	travellers := make([]processTermsTravellerXML, len(profile.Travellers))
-	for i := range profile.Travellers {
-		travellers[i] = processTermsTravellerXML{
-			Age:                      profile.Travellers[i].Age,
-			Name:                     mapProcessTermsName(profile.Travellers[i].Name),
-			CustomSupplierParameters: mapCustomSupplierParameters(profile.Travellers[i].CustomSupplierParameters),
-		}
+func (c *Client) ProcessTerms(ctx context.Context, req ProcessTermsRequest) (*ProcessTermsResult, error) {
+	if strings.TrimSpace(c.xmlLoginID) == "" || strings.TrimSpace(c.loginID) == "" {
+		return nil, ErrMissingCredentials
 	}
-	return processTermsProfileXML{
-		TravellerList:            processTermsTravellerList{Travellers: travellers},
-		ContactDetails:           mapProcessTermsContact(profile.ContactDetails),
-		CustomSupplierParameters: mapCustomSupplierParameters(profile.CustomSupplierParameters),
-	}
-}
 
-func mapProcessTermsName(name Name) processTermsNameXML {
-	return processTermsNameXML{
-		Title:        strings.TrimSpace(name.Title),
-		NamePartList: namePartList{NameParts: name.NameParts},
+	resp, err := c.processTerms(ctx, newProcessTermsCommand(c.xmlLoginID, c.loginID, req))
+	if err != nil {
+		return nil, err
 	}
-}
-
-func mapProcessTermsContact(contact ContactDetails) processTermsContactXML {
-	return processTermsContactXML{
-		Name: mapProcessTermsName(contact.Name),
-		Address: processTermsAddress{
-			Street:      contact.Address.Street,
-			City:        contact.Address.City,
-			Province:    contact.Address.Province,
-			Postcode:    contact.Address.Postcode,
-			CountryCode: contact.Address.CountryCode,
-		},
-		MobilePhone: processTermsPhoneXML{
-			InternationalCode: contact.MobilePhone.InternationalCode,
-			Number:            contact.MobilePhone.Number,
-		},
-		Email: contact.Email,
-	}
-}
-
-func mapCustomSupplierParameters(src []CustomSupplierParameter) customSupplierParameterList {
-	params := make([]customSupplierParameterXML, 0, len(src))
-	for _, param := range src {
-		name := strings.TrimSpace(param.Name)
-		value := strings.TrimSpace(param.Value)
-		if name == "" || value == "" {
-			continue
-		}
-		params = append(params, customSupplierParameterXML{Name: name, Value: value})
-	}
-	return customSupplierParameterList{Parameters: params}
+	return mapProcessTerms(resp), nil
 }
 
 func mapProcessTerms(resp processTermsResponse) *ProcessTermsResult {
