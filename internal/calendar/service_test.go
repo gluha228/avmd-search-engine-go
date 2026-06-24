@@ -63,9 +63,9 @@ func TestCacheFlightsKeepsMinimumPricePerDate(t *testing.T) {
 	date := time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC)
 
 	err := service.CacheFlights(context.Background(), "KIV", "OTP", []travelfusion.Flight{
-		{DepartureTime: date, Price: 200, Currency: "EUR"},
-		{DepartureTime: date.Add(2 * time.Hour), Price: 150, Currency: "EUR"},
-		{DepartureTime: date.AddDate(0, 0, 1), Price: 300, Currency: "EUR"},
+		{DepartureTime: date, Price: 400, Currency: "EUR", PassengerPrices: travelfusion.PassengerPrices{Adults: []float64{200}}},
+		{DepartureTime: date.Add(2 * time.Hour), Price: 300, Currency: "EUR", PassengerPrices: travelfusion.PassengerPrices{Adults: []float64{150}}},
+		{DepartureTime: date.AddDate(0, 0, 1), Price: 600, Currency: "EUR", PassengerPrices: travelfusion.PassengerPrices{Adults: []float64{300}}},
 	})
 	if err != nil {
 		t.Fatalf("CacheFlights returned error: %v", err)
@@ -84,7 +84,7 @@ func TestCacheFlightsConvertsPricesToDefaultCurrency(t *testing.T) {
 	date := time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC)
 
 	err := service.CacheFlights(context.Background(), "KIV", "OTP", []travelfusion.Flight{
-		{DepartureTime: date, Price: 100, Currency: "USD"},
+		{DepartureTime: date, Price: 300, Currency: "USD", PassengerPrices: travelfusion.PassengerPrices{Adults: []float64{100}}},
 	})
 	if err != nil {
 		t.Fatalf("CacheFlights returned error: %v", err)
@@ -92,5 +92,22 @@ func TestCacheFlightsConvertsPricesToDefaultCurrency(t *testing.T) {
 	entry := store.entries["KIV:OTP:2026-07-01"]
 	if entry.Price != 90 || entry.CurrencyCode != "EUR" {
 		t.Fatalf("expected converted EUR entry, got %+v", entry)
+	}
+}
+
+func TestCacheFlightsSkipsFlightsWithoutAdultPrice(t *testing.T) {
+	store := &fakePriceStore{entries: map[string]PriceEntry{}}
+	service := NewService(store, "EUR", nil, nil)
+	date := time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC)
+
+	err := service.CacheFlights(context.Background(), "KIV", "OTP", []travelfusion.Flight{
+		{DepartureTime: date, Price: 300, Currency: "EUR"},
+		{DepartureTime: date.Add(2 * time.Hour), Price: 300, Currency: "EUR", PassengerPrices: travelfusion.PassengerPrices{Children: []float64{150}}},
+	})
+	if err != nil {
+		t.Fatalf("CacheFlights returned error: %v", err)
+	}
+	if len(store.entries) != 0 {
+		t.Fatalf("expected no cached calendar entries, got %+v", store.entries)
 	}
 }

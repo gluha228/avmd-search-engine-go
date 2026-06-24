@@ -76,13 +76,13 @@ func (s *Service) GetCalendar(ctx context.Context, req Request) (*Response, erro
 func (s *Service) CacheFlights(ctx context.Context, departure, arrival string, flights []travelfusion.Flight) error {
 	minByDate := make(map[string]PriceEntry)
 	for _, flight := range flights {
-		if flight.Price <= 0 || flight.DepartureTime.IsZero() {
+		price, ok := adultPrice(flight)
+		if !ok || flight.DepartureTime.IsZero() {
 			continue
 		}
 		date := dateOnly(flight.DepartureTime).Format(time.DateOnly)
-		price := flight.Price
 		if s.currency != nil {
-			converted, err := s.currency.Convert(ctx, flight.Price, flight.Currency, s.defaultCurrency)
+			converted, err := s.currency.Convert(ctx, price, flight.Currency, s.defaultCurrency)
 			if err == nil {
 				price = converted
 			} else if s.logger != nil {
@@ -111,6 +111,13 @@ func (s *Service) CacheFlights(ctx context.Context, departure, arrival string, f
 		s.logger.Debug("cached calendar prices", "departure", departure, "arrival", arrival, "days", len(minByDate))
 	}
 	return nil
+}
+
+func adultPrice(flight travelfusion.Flight) (float64, bool) {
+	if len(flight.PassengerPrices.Adults) == 0 || flight.PassengerPrices.Adults[0] <= 0 {
+		return 0, false
+	}
+	return flight.PassengerPrices.Adults[0], true
 }
 
 func (s *Service) Validate(req Request) error {
